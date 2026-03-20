@@ -131,7 +131,20 @@ function Profile() {
             <button onClick={() => navigate("/register")}>⭐ Register as Artisan / NGO</button>
           </div>
         </div>
-      </div>
+
+      {showLogoutModal && (
+        <div className="prof-logout-overlay">
+          <div className="prof-logout-modal">
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out?</p>
+            <div className="prof-logout-actions">
+              <button className="prof-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+              <button className="prof-logout-confirm" onClick={handleLogout}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     );
   }
 

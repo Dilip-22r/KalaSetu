@@ -1,0 +1,121 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.theme-bg {
+  background: linear-gradient(135deg, #f4f1ec, #efe4d8);
+  font-family: "Poppins", sans-serif;
+}
+
+.navbar {
+  width: 100%;
+  background: linear-gradient(135deg, #6c9a9e, #8fb8b3);
+  padding: 20px 60px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+.brand-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+.nav-buttons button {
+  margin-left: 15px;
+  padding: 8px 18px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.3s ease;
+}
+
+.nav-buttons button {
+  background-color: white;
+  color: #6c9a9e;
+}
+
+.nav-buttons button:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.container-fluid {
+  padding-bottom: 2rem;
+}
+
+/* Card */
+.theme-card {
+  border-radius: 30px;
+  background: #ffffff;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.theme-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Title */
+.theme-title {
+  color: #6c9a9e;
+  font-weight: 600;
+}
+.subtitle {
+  color: #777;
+  font-size: 0.95rem;
+}
+
+/* Labels */
+.theme-label {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+/* Inputs */
+.custom-input {
+  padding: 12px 15px;
+  border-radius: 15px;
+  border: 1px solid #ddd;
+  background-color: #faf8f5;
+  transition: all 0.25s ease;
+}
+.custom-input:focus {
+  border-color: #d28c6f;
+  background-color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(210, 140, 111, 0.25);
+}
+
+/* Button */
+.theme-btn {
+  background: linear-gradient(135deg, #d28c6f, #c1785c);
+  color: white;
+  border-radius: 30px;
+  padding: 12px;
+  font-weight: 500;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.theme-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(210, 140, 111, 0.4);
+}
+
+/* Links */
+.theme-link {
+  color: #d28c6f;
+  cursor: pointer;
+}
+.theme-link:hover {
+  text-decoration: underline;
+}

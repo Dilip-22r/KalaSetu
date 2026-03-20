@@ -1,0 +1,91 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+.theme-bg {
+  background: linear-gradient(135deg, #f4f1ec, #efe4d8);
+}
+
+.navbar {
+  width: 100%;
+  background: linear-gradient(135deg, #6c9a9e, #8fb8b3);
+  padding: 20px 60px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+.brand-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+.nav-buttons button {
+  margin-left: 15px;
+  padding: 8px 18px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: 0.3s ease;
+}
+
+.nav-buttons button {
+  background-color: white;
+  color: #6c9a9e;
+}
+
+.nav-buttons button:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.container-fluid {
+  padding-bottom: 2rem;
+}
+
+.theme-card {
+  border-radius: 30px;
+  background: #ffffff;
+}
+.theme-title {
+  color: #6c9a9e;
+  font-weight: 600;
+}
+.subtitle {
+  color: #777;
+  font-size: 0.95rem;
+}
+.theme-label {
+  font-size: 0.85rem;
+  color: #555;
+}
+.custom-input {
+  padding: 12px 15px;
+  border-radius: 15px;
+  border: 1px solid #ddd;
+}
+.custom-input:focus {
+  border-color: #d28c6f;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 0.2rem rgba(210, 140, 111, 0.25);
+}
+.theme-btn {
+  background: linear-gradient(135deg, #d28c6f, #c1785c);
+  color: white;
+  border-radius: 30px;
+  padding: 12px;
+  font-weight: 500;
+  border: none;
+}
+.theme-link {
+  color: #d28c6f;
+  cursor: pointer;
+}
+.theme-link:hover {
+  text-decoration: underline;
+}

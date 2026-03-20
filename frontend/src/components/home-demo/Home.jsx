@@ -150,7 +150,7 @@ function Home() {
       <div className="home-container">
         <div className="welcome-banner">
           <div className="welcome-text">
-            <h2>Namaste, {user.fullName?.split(" ")[0]} 🙏</h2>
+            <h2>Hi, {user.fullName?.split(" ")[0]} 🙏</h2>
             <p>
               {user.role === "user"
                 ? "Browse cultural posts from artisans & NGOs across India. Register to share your own!"

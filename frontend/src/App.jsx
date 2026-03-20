@@ -5,8 +5,10 @@ import SignUp from "./components/signUp-demo/SignUp";
 import SignIn from "./components/signIn-demo/SignIn";
 import Home from "./components/home-demo/Home";
 import Register from "./components/register-demo/Register";
-import Footer from "./components/Footer";
-import Catalog from "./pages/Catalog";
+import Search from "./pages/Search";
+import Messages from "./pages/Messages";
+import Profile from "./pages/Profile";
+import CreatePost from "./pages/CreatePost";
 
 function App() {
   return (
@@ -17,9 +19,12 @@ function App() {
         <Route path="/signin" element={<SignIn />} />
         <Route path="/home" element={<Home />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/catalog" element={<Catalog />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/messages/:userId" element={<Messages />} />
+        <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/create-post" element={<CreatePost />} />
       </Routes>
-      <Footer />
     </BrowserRouter>
   );
 }

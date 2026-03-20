@@ -22,9 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-# large files
-node_modules/
-.env
-dist/
-build/
-.DS_Store

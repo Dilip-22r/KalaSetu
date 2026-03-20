@@ -25,7 +25,7 @@ function Landing() {
           <h1>Celebrate Culture and <br/>Build Your Journey</h1>
 
           <button className="primary-btn" onClick={() => 
-            navigate("/signin")}>Continue with Email
+            navigate("/signin")}>Login
           </button>
 
           <button className="secondary-btn" onClick={() => 

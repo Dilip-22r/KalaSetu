@@ -76,9 +76,17 @@ router.put("/upgrade-role", async (req, res) => {
       { new: true }
     );
 
+    // Issue a fresh token with the updated role
+    const token = jwt.sign(
+      { id: updatedUser._id, role: updatedUser.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     res.json({
       message: "Role updated successfully",
       user: updatedUser,
+      token,
     });
 
   } catch (error) {

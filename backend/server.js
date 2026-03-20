@@ -3,24 +3,25 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
-import weatherRoutes from "./routes/weatherRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
-// Routes
 app.use("/auth", authRoutes);
-app.use("/weather", weatherRoutes);
+app.use("/posts", postRoutes);
+app.use("/messages", messageRoutes);
+app.use("/profiles", profileRoutes);
 
-// Connect DB
 connectDB();
 
-// Start Server
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`KalaSetu server running on port ${PORT}`);
 });

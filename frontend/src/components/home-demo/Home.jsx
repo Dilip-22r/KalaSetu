@@ -1,276 +1,216 @@
-{/*
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import axios from "axios";
 import "./Home.css";
 
-function Home() {
+const API = "http://localhost:5000";
+
+function PostCard({ post, currentUser, onLike, onDelete }) {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const liked = post.likes?.includes(currentUser?._id);
+  const isOwner = post.author?._id === currentUser?._id;
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-
-    if (!storedUser) {
-      navigate("/signin");
-    } else {
-      setUser(JSON.parse(storedUser));
-    }
-  }, [navigate]);
-
-
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
-  }
-
-  if (!user) return null;
+  const categoryEmoji = {
+    event: "🎪", artwork: "🎨", story: "📖", workshop: "🛠️", announcement: "📢",
+  };
 
   return (
-    <div className="home-bg">
-      <nav className="navbar">
-        <h1 className="brand-title">KalaSetu</h1>
-        <div className="nav-buttons">
-          {user.role !== "user" && (
-            <button>Create Post</button>
-          )}
-          {user.role === "user" && (
-            <button onClick={() => navigate("/register")}>
-              Register
-            </button>
-          )}
-          <button onClick={handleLogout}>Logout</button>
-          <button onClick={() => navigate("/weather")}>
-            Weather
-          </button>
-
+    <div className="post-card">
+      {post.image && (
+        <div className="post-image-wrap">
+          <img src={post.image} alt={post.title} className="post-image" />
         </div>
-      </nav>
-
-      <div className="container-fluid py-4">
-        <div className="card home-card mb-4">
-          <h3>Welcome, {user.username} 👋</h3>
-          <p>
-            Explore cultural stories, artisans, and upcoming events.
-          </p>
+      )}
+      <div className="post-body">
+        <div className="post-meta">
+          <span className="post-category">
+            {categoryEmoji[post.category] || "📌"} {post.category}
+          </span>
+          <span className="post-date">
+            {new Date(post.createdAt).toLocaleDateString("en-IN", {
+              day: "numeric", month: "short", year: "numeric",
+            })}
+          </span>
+        </div>
+        <h3 className="post-title">{post.title}</h3>
+        <p className="post-content">{post.content}</p>
+        {post.tags?.length > 0 && (
+          <div className="post-tags">
+            {post.tags.map((t, i) => <span key={i} className="tag">#{t}</span>)}
+          </div>
+        )}
+        <div className="post-footer">
+          <div className="post-author" onClick={() => navigate(`/profile/${post.author?._id}`)}>
+            <div className="author-avatar">
+              {post.author?.username?.[0]?.toUpperCase()}
+            </div>
+            <div>
+              <span className="author-name">{post.author?.fullName}</span>
+              <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
+            </div>
+          </div>
+          <div className="post-actions">
+            <button
+              className={`like-btn ${liked ? "liked" : ""}`}
+              onClick={() => onLike(post._id)}
+              disabled={!currentUser}
+            >
+              {liked ? "❤️" : "🤍"} {post.likes?.length || 0}
+            </button>
+            {isOwner && (
+              <button className="delete-btn" onClick={() => onDelete(post._id)}>🗑️</button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default Home;
-*/}
-
-
-
-
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import axios from "axios";
-import {
-  Line
-} from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  Legend,
-  Tooltip,
-} from "chart.js";
-import "./Home.css";
-
-ChartJS.register(
-  LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  Legend,
-  Tooltip
-);
-
 function Home() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-
-  const [weatherData, setWeatherData] = useState(null);
-  const [locationName, setLocationName] = useState("");
-  const [currentDate, setCurrentDate] = useState("");
-
-  const [showWeatherInput, setShowWeatherInput] = useState(false);
-  const [city, setCity] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-
-    if (!storedUser) {
-      navigate("/signin");
-    } else {
-      setUser(storedUser);
-    }
+    const stored = localStorage.getItem("user");
+    if (!stored) { navigate("/signin"); return; }
+    setUser(JSON.parse(stored));
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/");
-  };
+  useEffect(() => { fetchPosts(); }, [search, category]);
 
-  const fetchWeatherByCity = async (cityName) => {
-    if (!cityName) {
-      alert("Please enter a city name");
-      return;
-    }
-
+  const fetchPosts = async () => {
+    setLoading(true);
     try {
-      const res = await axios.get(
-        `http://localhost:5000/weather?city=${cityName}`
-      );
+      const params = {};
+      if (search) params.search = search;
+      if (category) params.category = category;
+      const res = await axios.get(`${API}/posts`, { params });
+      setPosts(res.data);
+    } catch { setPosts([]); }
+    setLoading(false);
+  };
 
-      const list = res.data.list.slice(0, 8);
-
-      setLocationName(`${res.data.city}, ${res.data.country}`);
-      setCurrentDate(new Date().toDateString());
-
-      setWeatherData({
-        labels: list.map(item =>
-          new Date(item.dt * 1000).getHours() + ":00"
-        ),
-        temp: list.map(item => item.main.temp),
-        humidity: list.map(item => item.main.humidity),
-        wind: list.map(item => item.wind.speed),
+  const handleLike = async (postId) => {
+    const token = localStorage.getItem("token");
+    try {
+      await axios.put(`${API}/posts/${postId}/like`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      //setShowWeatherInput(false);
-
-    } catch (err) {
-      alert("City not found or weather fetch failed");
-    }
+      fetchPosts();
+    } catch {}
   };
 
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { position: "top" }
-    }
+  const handleDelete = async (postId) => {
+    if (!window.confirm("Delete this post?")) return;
+    const token = localStorage.getItem("token");
+    try {
+      await axios.delete(`${API}/posts/${postId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchPosts();
+    } catch {}
   };
-
-  const createChartData = (label, data, color) => ({
-    labels: weatherData.labels,
-    datasets: [
-      {
-        label,
-        data,
-        borderColor: color,
-        backgroundColor: color,
-        tension: 0.4,
-      },
-    ],
-  });
 
   if (!user) return null;
 
+  const roleLabel = user.role === "artisan" ? "🎨 Artisan" : user.role === "ngo" ? "🤝 NGO" : "👤 User";
+
   return (
     <div className="home-bg">
-
       <nav className="navbar">
-        <h1 className="brand-title">KalaSetu</h1>
-
+        <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
         <div className="nav-buttons">
-
+          <button onClick={() => navigate("/search")}>🔍 Explore</button>
+          {user.role !== "user" && (
+            <>
+              <button onClick={() => navigate("/create-post")}>✏️ Create Post</button>
+              <button onClick={() => navigate("/messages")}>💬 Messages</button>
+            </>
+          )}
           {user.role === "user" && (
-            <button onClick={() => navigate("/register")}>
-              Register
+            <button className="register-btn" onClick={() => navigate("/register")}>
+              ⭐ Register as Artisan/NGO
             </button>
           )}
-
-          {user.role !== "user" && (
-            <button>Create Post</button>
-          )}
-
-          <button onClick={() => setShowWeatherInput(true)}>
-            Weather
+          {/* Profile button — shows username + role, no logout here */}
+          <button
+            className="profile-btn"
+            onClick={() => navigate(`/profile/${user._id}`)}
+          >
+            <span className="profile-btn-name">👤 {user.username}</span>
           </button>
-
-          <button onClick={handleLogout}>
-            Logout
-          </button>
-
         </div>
       </nav>
 
-      <div className="container-fluid py-4">
-
-        <div className="card home-card mb-4">
-          <h3>Welcome, {user.username} 👋</h3>
-          <p>Explore cultural stories and weather updates in your region.</p>
+      <div className="home-container">
+        <div className="welcome-banner">
+          <div className="welcome-text">
+            <h2>Namaste, {user.fullName?.split(" ")[0]} 🙏</h2>
+            <p>
+              {user.role === "user"
+                ? "Browse cultural posts from artisans & NGOs across India. Register to share your own!"
+                : `Welcome back, ${user.role === "artisan" ? "Artisan" : "NGO"} — share your culture with the community.`}
+            </p>
+          </div>
+          <div className="welcome-role-badge">
+            <span className={`big-role-badge ${user.role}`}>{roleLabel}</span>
+          </div>
         </div>
 
-        {showWeatherInput && (
-          <div className="weather-search-card">
-            <input
-              type="text"
-              placeholder="Enter city name"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-            <button onClick={() => fetchWeatherByCity(city)}>
-              Get Weather
-            </button>
+        <div className="filters-bar">
+          <input
+            className="search-input"
+            type="text"
+            placeholder="Search posts, tags, content..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            className="category-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">All Categories</option>
+            <option value="event">🎪 Events</option>
+            <option value="artwork">🎨 Artwork</option>
+            <option value="story">📖 Stories</option>
+            <option value="workshop">🛠️ Workshops</option>
+            <option value="announcement">📢 Announcements</option>
+          </select>
+        </div>
+
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Loading cultural posts...</p>
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="empty-state">
+            <span>🪷</span>
+            <h3>No posts found</h3>
+            <p>{user.role !== "user" ? "Be the first to share something cultural!" : "No posts yet — check back soon!"}</p>
+            {user.role !== "user" && (
+              <button onClick={() => navigate("/create-post")}>Create First Post</button>
+            )}
+          </div>
+        ) : (
+          <div className="posts-grid">
+            {posts.map((post) => (
+              <PostCard
+                key={post._id}
+                post={post}
+                currentUser={user}
+                onLike={handleLike}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
-
-        {weatherData && (
-          <>
-            <div className="weather-info-card">
-              <h4>📍 {locationName}</h4>
-              <p>📅 {currentDate}</p>
-            </div>
-
-            <div className="weather-grid">
-
-              <div className="weather-card">
-                <h4>🌡 Temperature (°C)</h4>
-                <Line
-                  data={createChartData(
-                    "Temperature",
-                    weatherData.temp,
-                    "orange"
-                  )}
-                  options={chartOptions}
-                />
-              </div>
-
-              <div className="weather-card">
-                <h4>💧 Humidity (%)</h4>
-                <Line
-                  data={createChartData(
-                    "Humidity",
-                    weatherData.humidity,
-                    "blue"
-                  )}
-                  options={chartOptions}
-                />
-              </div>
-
-              <div className="weather-card">
-                <h4>🌬 Wind Speed (m/s)</h4>
-                <Line
-                  data={createChartData(
-                    "Wind Speed",
-                    weatherData.wind,
-                    "green"
-                  )}
-                  options={chartOptions}
-                />
-              </div>
-
-            </div>
-          </>
-        )}
-
       </div>
     </div>
   );

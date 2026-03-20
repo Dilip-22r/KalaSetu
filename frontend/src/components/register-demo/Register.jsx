@@ -4,38 +4,71 @@ import axios from "axios";
 import { useState } from "react";
 import "./Register.css";
 
+const API = "http://localhost:5000";
+
 function Register() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm();
 
   const onFormSubmit = async (data) => {
-  try {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
+    setLoading(true);
+    setError("");
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      const token = localStorage.getItem("token");
 
-    const response = await axios.put(
-      "http://localhost:5000/auth/upgrade-role",
-      {
+      // 1. Upgrade role — get back a fresh token
+      const roleRes = await axios.put(`${API}/auth/upgrade-role`, {
         userId: storedUser._id,
-        newRole: data.userType.toLowerCase(), // artisan or ngo
-      }
-    );
+        newRole: data.userType.toLowerCase(),
+      });
 
-    // Update localStorage with new role
-    localStorage.setItem("user", JSON.stringify(response.data.user));
+      const newToken = roleRes.data.token;
 
-    alert("Profile created successfully!");
-    navigate("/home");
+      // 2. Save profile details using the NEW token
+      await axios.post(
+        `${API}/profiles`,
+        {
+          displayName: data.name,
+          age: data.age,
+          gender: data.gender,
+          skills: data.skills,
+          location: data.location,
+          about: data.about,
+          photo: data.photo || "",
+          userType: data.userType,
+        },
+        { headers: { Authorization: `Bearer ${newToken}` } }
+      );
 
-  } catch (error) {
-    alert("Something went wrong while upgrading role.");
-  }
-};
+      const rawUser = roleRes.data.user;
 
+      // 3. Rebuild user object cleanly — Mongoose docs don't spread reliably
+      const updatedUser = {
+        _id: rawUser._id || storedUser._id,
+        fullName: rawUser.fullName || storedUser.fullName,
+        email: rawUser.email || storedUser.email,
+        username: rawUser.username || storedUser.username,
+        role: rawUser.role,   // this is the critical field
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem("token", newToken);
+
+      console.log("Role upgraded to:", updatedUser.role, "| New token:", newToken?.slice(0, 20) + "...");
+
+      navigate("/home");
+    } catch (err) {
+      setError(err.response?.data?.message || "Something went wrong. Please try again.");
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="theme-bg">
@@ -43,134 +76,107 @@ function Register() {
         <h1 className="brand-title">KalaSetu</h1>
         <div className="nav-buttons">
           <button onClick={() => navigate("/home")}>Back</button>
-          <button onClick={() => navigate("/")}>Logout</button>
+          <button onClick={() => { localStorage.clear(); navigate("/"); }}>Logout</button>
         </div>
       </nav>
-      <div className="container-fluid d-flex justify-content-center">
-        <div className="row w-100 justify-content-center">
-          <div className="col-lg-6 col-xl-5">
-            <div className="card theme-card shadow-lg">
-              <div className="row g-0">
-                <div className="col-12 p-5">
 
-                  <h2 className="theme-title mb-2 text-center">Join KalaSetu</h2>
-                  <p className="subtitle mb-4 text-center">Share your culture with the world</p>
+      <div className="reg-container">
+        <div className="reg-card">
+          <h2 className="theme-title">Join as Artisan or NGO</h2>
+          <p className="subtitle">Complete your profile to unlock posting and messaging</p>
 
-                  <form onSubmit={handleSubmit(onFormSubmit)}>
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Name</label>
-                      <input
-                        type="text"
-                        className="form-control custom-input"
-                        placeholder="Enter your full name"
-                        {...register("name", { required: true })}
-                      />
-                      {errors.name && (
-                        <small className="text-danger">Name is required</small>
-                      )}
-                    </div>
+          {error && <div className="reg-error">{error}</div>}
 
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Age</label>
-                      <input
-                        type="number"
-                        className="form-control custom-input"
-                        placeholder="Enter your age"
-                        {...register("age", {
-                          required: true,
-                          min: 12, max: 100,
-                        })}
-                      />
-                      {errors.age && (
-                        <small className="text-danger">Enter a valid age</small>
-                      )}
-                    </div>
+          <form onSubmit={handleSubmit(onFormSubmit)} className="reg-form">
+            <div className="reg-row">
+              <div className="reg-field">
+                <label>Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="Enter your full name"
+                  {...register("name", { required: "Name is required" })}
+                />
+                {errors.name && <small>{errors.name.message}</small>}
+              </div>
 
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Gender</label>
-                      <select
-                        {...register("gender", { required: true })}
-                      >
-                        <option value="">Select</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                        <option>Other</option>
-                      </select>
-                      {errors.gender && (
-                        <small className="text-danger">
-                          Gender is required
-                        </small>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Skills / Art Form</label>
-                      <input
-                        type="text"
-                        className="form-control custom-input"
-                        placeholder="Eg: Handloom, Folk Dance"
-                        {...register("skills", { required: true })}
-                      />
-                      {errors.skills && (
-                        <small className="text-danger">Skills are required</small>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Location</label>
-                      <input
-                        type="text"
-                        className="form-control custom-input"
-                        {...register("location", { required: true })}
-                      />
-                      {errors.location && (
-                        <small className="text-danger">Location is required</small>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label theme-label">About Me</label>
-                      <textarea
-                        placeholder="Tell us about your cultural journey..."
-                        {...register("about", { required: true })}
-                      />
-                      {errors.about && (
-                        <small className="text-danger">This field is required</small>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label theme-label">
-                        User Type
-                      </label>
-                      <select
-                        {...register("userType", { required: true })}>
-                        <option value="">Select user type</option>
-                        <option>Artisan</option>
-                        <option>NGO</option>
-                      </select>
-                      {errors.userType && (
-                        <small className="text-danger">Select a user type</small>
-                      )}
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label theme-label">Profile Photo</label>
-                      <input
-                        type="file"
-                        className="form-control custom-input"
-                        {...register("photo")}
-                      />
-                    </div>
-
-                    <button className="btn theme-btn w-100 mb-3">Create Profile</button>
-
-                  </form>
-
-                </div>
+              <div className="reg-field">
+                <label>Age *</label>
+                <input
+                  type="number"
+                  placeholder="Your age"
+                  {...register("age", { required: "Age is required", min: { value: 12, message: "Must be at least 12" }, max: { value: 100, message: "Invalid age" } })}
+                />
+                {errors.age && <small>{errors.age.message}</small>}
               </div>
             </div>
-          </div>
+
+            <div className="reg-row">
+              <div className="reg-field">
+                <label>Gender *</label>
+                <select {...register("gender", { required: "Gender is required" })}>
+                  <option value="">Select gender</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                  <option>Prefer not to say</option>
+                </select>
+                {errors.gender && <small>{errors.gender.message}</small>}
+              </div>
+
+              <div className="reg-field">
+                <label>Register As *</label>
+                <select {...register("userType", { required: "Please select a type" })}>
+                  <option value="">Select type</option>
+                  <option>Artisan</option>
+                  <option>NGO</option>
+                </select>
+                {errors.userType && <small>{errors.userType.message}</small>}
+              </div>
+            </div>
+
+            <div className="reg-field">
+              <label>Skills / Art Form *</label>
+              <input
+                type="text"
+                placeholder="e.g. Handloom weaving, Bharatanatyam, Madhubani painting"
+                {...register("skills", { required: "Skills are required" })}
+              />
+              {errors.skills && <small>{errors.skills.message}</small>}
+            </div>
+
+            <div className="reg-field">
+              <label>Location *</label>
+              <input
+                type="text"
+                placeholder="City, State"
+                {...register("location", { required: "Location is required" })}
+              />
+              {errors.location && <small>{errors.location.message}</small>}
+            </div>
+
+            <div className="reg-field">
+              <label>About You *</label>
+              <textarea
+                placeholder="Tell the community about your cultural journey, your craft, and what inspires you..."
+                rows={4}
+                {...register("about", { required: "Please write something about yourself" })}
+              />
+              {errors.about && <small>{errors.about.message}</small>}
+            </div>
+
+            <div className="reg-field">
+              <label>Profile Photo URL <span className="opt-label">(optional)</span></label>
+              <input
+                type="url"
+                placeholder="https://example.com/your-photo.jpg"
+                {...register("photo")}
+              />
+            </div>
+
+            <button type="submit" className="reg-submit" disabled={loading}>
+              {loading ? "Creating Profile..." : "✨ Create My Profile"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

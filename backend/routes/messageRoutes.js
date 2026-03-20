@@ -2,6 +2,7 @@ import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
@@ -93,6 +94,14 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     });
     await msg.save();
     const populated = await msg.populate("sender", "username fullName");
+
+    // Realtime Socket Payload Push
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      // io.to() acts specifically on one unique socket instance
+      io.to(receiverSocketId).emit("newMessage", populated);
+    }
+
     res.status(201).json(populated);
   } catch (err) {
     res.status(500).json({ message: err.message });

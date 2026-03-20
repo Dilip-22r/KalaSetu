@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import { useAuthStore } from "../store/useAuthStore";
+import { useChatStore } from "../store/useChatStore";
 import "./Messages.css";
 
 const API = "http://localhost:5000";
@@ -14,7 +16,11 @@ function Messages() {
   const [conversations, setConversations] = useState([]);
   const [activeUserId, setActiveUserId] = useState(paramUserId || null);
   const [activeUser, setActiveUser] = useState(null);
-  const [messages, setMessages] = useState([]);
+  
+  // Zustand States
+  const { onlineUsers } = useAuthStore();
+  const { messages, setMessages, setSelectedUserId, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
+
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -45,7 +51,21 @@ function Messages() {
   }
 
   useEffect(() => { fetchConversations(); }, []);
-  useEffect(() => { if (activeUserId) openConversation(activeUserId); }, [activeUserId]);
+  
+  useEffect(() => { 
+    if (activeUserId) {
+      setSelectedUserId(activeUserId);
+      openConversation(activeUserId); 
+    }
+  }, [activeUserId, setSelectedUserId]);
+
+  useEffect(() => {
+    subscribeToMessages();
+
+    // Cleanup function to prevent memory leaks or duplicate messages
+    return () => unsubscribeFromMessages();
+  }, [subscribeToMessages, unsubscribeFromMessages]);
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const fetchConversations = async () => {
@@ -80,7 +100,7 @@ function Messages() {
       const res = await axios.post(`${API}/messages`, { receiverId: activeUserId, text }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setMessages(prev => [...prev, res.data]);
+      setMessages([...messages, res.data]);
       setText("");
       fetchConversations();
     } catch {}
@@ -181,7 +201,12 @@ function Messages() {
                   className={`msg-conv-item ${activeUserId === conv.partner._id ? "active" : ""}`}
                   onClick={() => { setActiveUser(conv.partner); setActiveUserId(conv.partner._id); }}
                 >
-                  <div className="msg-conv-avatar">{conv.partner.username?.[0]?.toUpperCase()}</div>
+                  <div className="msg-conv-avatar">
+                    {conv.partner.username?.[0]?.toUpperCase()}
+                    {onlineUsers.includes(conv.partner._id) && (
+                       <span className="msg-online-dot"></span>
+                    )}
+                  </div>
                   <div className="msg-conv-info">
                     <div className="msg-conv-name">{conv.partner.fullName}</div>
                     <div className="msg-conv-last">{conv.lastMessage?.text?.slice(0, 32)}...</div>

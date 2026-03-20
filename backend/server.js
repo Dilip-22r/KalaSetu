@@ -6,10 +6,9 @@ import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
+import { app, server } from "./lib/socket.js";
 
 dotenv.config();
-
-const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
@@ -22,6 +21,6 @@ app.use("/profiles", profileRoutes);
 connectDB();
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`KalaSetu server running on port ${PORT}`);
 });

@@ -202,14 +202,20 @@ function Messages() {
                   onClick={() => { setActiveUser(conv.partner); setActiveUserId(conv.partner._id); }}
                 >
                   <div className="msg-conv-avatar">
-                    {conv.partner.username?.[0]?.toUpperCase()}
+                    {conv.partner.photo ? (
+                      <img src={conv.partner.photo} alt="" className="msg-conv-avatar-img" />
+                    ) : (
+                      conv.partner.username?.[0]?.toUpperCase()
+                    )}
                     {onlineUsers.includes(conv.partner._id) && (
                        <span className="msg-online-dot"></span>
                     )}
                   </div>
                   <div className="msg-conv-info">
                     <div className="msg-conv-name">{conv.partner.fullName}</div>
-                    <div className="msg-conv-last">{conv.lastMessage?.text?.slice(0, 32)}...</div>
+                    <div className="msg-conv-last">
+                      {conv.lastMessage?.text ? conv.lastMessage.text.slice(0, 32) + (conv.lastMessage.text.length > 32 ? "..." : "") : "No messages yet"}
+                    </div>
                   </div>
                   <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
                 </div>
@@ -229,7 +235,13 @@ function Messages() {
           ) : (
             <>
               <div className="msg-chat-header">
-                <div className="msg-chat-avatar">{activeUser?.username?.[0]?.toUpperCase()}</div>
+                <div className="msg-chat-avatar">
+                  {activeUser?.photo ? (
+                    <img src={activeUser.photo} alt="" className="msg-chat-avatar-img" />
+                  ) : (
+                    activeUser?.username?.[0]?.toUpperCase()
+                  )}
+                </div>
                 <div>
                   <div className="msg-chat-name">{activeUser?.fullName || "User"}</div>
                   <div className={`msg-chat-role ${activeUser?.role}`}>{activeUser?.role}</div>

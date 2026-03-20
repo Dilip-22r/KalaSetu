@@ -60,8 +60,7 @@ function Profile() {
     navigate("/edit-profile");
   };
 
-  // Navbar is shared across all states
-  const Navbar = () => (
+  const renderNavbar = () => (
     <nav className="prof-navbar">
       <h1 onClick={() => navigate(currentUser ? "/home" : "/")}>KalaSetu</h1>
       <div className="prof-nav-btns">
@@ -76,7 +75,6 @@ function Profile() {
             💬 Message
           </button>
         )}
-        {/* Logout only on profile page */}
         <button className="prof-logout-btn" onClick={() => setShowLogoutModal(true)}>Logout</button>
       </div>
     </nav>
@@ -85,7 +83,7 @@ function Profile() {
   if (loading) {
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         <div className="prof-loading"><div className="prof-spinner"></div><p>Loading profile...</p></div>
       </div>
     );
@@ -97,7 +95,7 @@ function Profile() {
       : currentUser.role === "ngo" ? "🤝 NGO" : "👤 User";
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         {showRegisterMsg && (
           <div className="prof-register-toast">
             ⭐ Please register as an Artisan or NGO to edit your profile
@@ -141,7 +139,7 @@ function Profile() {
   if (notFound || !profile) {
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         <div className="prof-not-found">
           <span>🪷</span>
           <h2>Profile Not Found</h2>
@@ -160,7 +158,7 @@ function Profile() {
 
   return (
     <div className="prof-bg">
-      <Navbar />
+      {renderNavbar()}
 
       {/* Toast message when user role clicks Edit Profile */}
       {showRegisterMsg && (

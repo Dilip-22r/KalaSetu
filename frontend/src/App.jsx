@@ -8,6 +8,7 @@ import Register from "./components/register-demo/Register";
 import Search from "./pages/Search";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 import CreatePost from "./pages/CreatePost";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
         <Route path="/messages" element={<Messages />} />
         <Route path="/messages/:userId" element={<Messages />} />
         <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/create-post" element={<CreatePost />} />
       </Routes>
     </BrowserRouter>

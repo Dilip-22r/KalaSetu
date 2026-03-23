@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import { useAuthStore } from "../store/useAuthStore";
 import "./Profile.css";
 
 const API = "http://localhost:5000";
@@ -16,6 +17,7 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const isOwn = currentUser && currentUser._id === userId;
 
@@ -44,6 +46,7 @@ function Profile() {
 
   const handleLogout = () => {
     localStorage.clear();
+    useAuthStore.getState().setAuthUser(null);
     navigate("/");
   };
 
@@ -54,11 +57,10 @@ function Profile() {
       setTimeout(() => setShowRegisterMsg(false), 3000);
       return;
     }
-    navigate("/register");
+    navigate("/edit-profile");
   };
 
-  // Navbar is shared across all states
-  const Navbar = () => (
+  const renderNavbar = () => (
     <nav className="prof-navbar">
       <h1 onClick={() => navigate(currentUser ? "/home" : "/")}>KalaSetu</h1>
       <div className="prof-nav-btns">
@@ -73,8 +75,7 @@ function Profile() {
             💬 Message
           </button>
         )}
-        {/* Logout only on profile page */}
-        <button className="prof-logout-btn" onClick={handleLogout}>Logout</button>
+        <button className="prof-logout-btn" onClick={() => setShowLogoutModal(true)}>Logout</button>
       </div>
     </nav>
   );
@@ -82,7 +83,7 @@ function Profile() {
   if (loading) {
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         <div className="prof-loading"><div className="prof-spinner"></div><p>Loading profile...</p></div>
       </div>
     );
@@ -94,7 +95,7 @@ function Profile() {
       : currentUser.role === "ngo" ? "🤝 NGO" : "👤 User";
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         {showRegisterMsg && (
           <div className="prof-register-toast">
             ⭐ Please register as an Artisan or NGO to edit your profile
@@ -130,7 +131,20 @@ function Profile() {
             <button onClick={() => navigate("/register")}>⭐ Register as Artisan / NGO</button>
           </div>
         </div>
-      </div>
+
+      {showLogoutModal && (
+        <div className="prof-logout-overlay">
+          <div className="prof-logout-modal">
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out?</p>
+            <div className="prof-logout-actions">
+              <button className="prof-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+              <button className="prof-logout-confirm" onClick={handleLogout}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     );
   }
 
@@ -138,7 +152,7 @@ function Profile() {
   if (notFound || !profile) {
     return (
       <div className="prof-bg">
-        <Navbar />
+        {renderNavbar()}
         <div className="prof-not-found">
           <span>🪷</span>
           <h2>Profile Not Found</h2>
@@ -157,7 +171,7 @@ function Profile() {
 
   return (
     <div className="prof-bg">
-      <Navbar />
+      {renderNavbar()}
 
       {/* Toast message when user role clicks Edit Profile */}
       {showRegisterMsg && (
@@ -277,6 +291,19 @@ function Profile() {
           </div>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <div className="prof-logout-overlay">
+          <div className="prof-logout-modal">
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out?</p>
+            <div className="prof-logout-actions">
+              <button className="prof-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+              <button className="prof-logout-confirm" onClick={handleLogout}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

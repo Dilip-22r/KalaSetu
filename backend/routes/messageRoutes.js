@@ -1,7 +1,9 @@
 import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
+import { Profile } from "../models/Profile.js";
 import jwt from "jsonwebtoken";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
@@ -49,7 +51,10 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
       const partner = msg.sender._id.toString() === userId ? msg.receiver : msg.sender;
       if (!seen.has(partner._id.toString())) {
         seen.add(partner._id.toString());
-        conversations.push({ partner, lastMessage: msg });
+        // Attach the partner's profile photo if they have one
+        const partnerProfile = await Profile.findOne({ user: partner._id }).select("photo");
+        const partnerWithPhoto = { ...partner.toObject(), photo: partnerProfile?.photo || "" };
+        conversations.push({ partner: partnerWithPhoto, lastMessage: msg });
       }
     }
     res.json(conversations);
@@ -93,6 +98,14 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     });
     await msg.save();
     const populated = await msg.populate("sender", "username fullName");
+
+    // Realtime Socket Payload Push
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
+      // io.to() acts specifically on one unique socket instance
+      io.to(receiverSocketId).emit("newMessage", populated);
+    }
+
     res.status(201).json(populated);
   } catch (err) {
     res.status(500).json({ message: err.message });

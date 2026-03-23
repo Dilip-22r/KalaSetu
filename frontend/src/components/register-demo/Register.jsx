@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useState } from "react";
+import { useAuthStore } from "../../store/useAuthStore";
 import "./Register.css";
 
 const API = "http://localhost:5000";
@@ -10,6 +11,13 @@ function Register() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    useAuthStore.getState().setAuthUser(null);
+    navigate("/");
+  };
 
   const {
     register,
@@ -76,7 +84,7 @@ function Register() {
         <h1 className="brand-title">KalaSetu</h1>
         <div className="nav-buttons">
           <button onClick={() => navigate("/home")}>Back</button>
-          <button onClick={() => { localStorage.clear(); navigate("/"); }}>Logout</button>
+          <button onClick={() => setShowLogoutModal(true)}>Logout</button>
         </div>
       </nav>
 
@@ -179,6 +187,19 @@ function Register() {
           </form>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <div className="reg-logout-overlay">
+          <div className="reg-logout-modal">
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out?</p>
+            <div className="reg-logout-actions">
+              <button className="reg-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
+              <button className="reg-logout-confirm" onClick={handleLogout}>Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

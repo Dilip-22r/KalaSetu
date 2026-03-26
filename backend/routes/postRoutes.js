@@ -126,3 +126,22 @@ router.put("/:id/like", requireAuth, async (req, res) => {
 });
 
 export default router;
+// EDIT post (author only)
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (post.author.toString() !== req.user.id) return res.status(403).json({ message: "Not your post" });
+    const { title, content, category, tags, image } = req.body;
+    post.title = title ?? post.title;
+    post.content = content ?? post.content;
+    post.category = category ?? post.category;
+    post.tags = tags ?? post.tags;
+    post.image = image ?? post.image;
+    await post.save();
+    const populated = await post.populate("author", "username fullName role");
+    res.json(populated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});

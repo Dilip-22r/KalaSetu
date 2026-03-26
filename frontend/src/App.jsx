@@ -10,6 +10,7 @@ import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import CreatePost from "./pages/CreatePost";
+import EditPost from "./pages/EditPost";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/create-post" element={<CreatePost />} />
+        <Route path="/edit-post/:postId" element={<EditPost />} />
       </Routes>
     </BrowserRouter>
   );

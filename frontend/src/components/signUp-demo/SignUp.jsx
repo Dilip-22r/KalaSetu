@@ -15,6 +15,7 @@ function SignUp() {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -51,8 +52,8 @@ function SignUp() {
         password: formData.password,
         role: "user",
       });
-      alert("Signup successful!");
-      navigate("/signin");
+      setSuccess("✅ Account created successfully! Redirecting to sign in...");
+      setTimeout(() => navigate("/signin"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
     }
@@ -95,6 +96,7 @@ function SignUp() {
 
           {/* Error */}
           {error && <div className="su-error">{error}</div>}
+          {success && <div className="su-success">{success}</div>}
 
           {/* ΓöÇΓöÇ STEP 1 ΓöÇΓöÇ */}
           {step === 1 && (

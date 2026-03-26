@@ -10,9 +10,7 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
   const liked = post.likes?.includes(currentUser?._id);
   const isOwner = post.author?._id === currentUser?._id;
 
-  const categoryEmoji = {
-    event: "🎪", artwork: "🎨", story: "📖", workshop: "🛠️", announcement: "📢",
-  };
+  const categoryEmoji = { event: "🎪", artwork: "🎨", story: "📖", workshop: "🛠️", announcement: "📢" };
 
   return (
     <div className="post-card">
@@ -23,13 +21,9 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
       )}
       <div className="post-body">
         <div className="post-meta">
-          <span className="post-category">
-            {categoryEmoji[post.category] || "📌"} {post.category}
-          </span>
+          <span className="post-category">{categoryEmoji[post.category] || "📌"} {post.category}</span>
           <span className="post-date">
-            {new Date(post.createdAt).toLocaleDateString("en-IN", {
-              day: "numeric", month: "short", year: "numeric",
-            })}
+            {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
           </span>
         </div>
         <h3 className="post-title">{post.title}</h3>
@@ -41,9 +35,7 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
         )}
         <div className="post-footer">
           <div className="post-author" onClick={() => navigate(`/profile/${post.author?._id}`)}>
-            <div className="author-avatar">
-              {post.author?.username?.[0]?.toUpperCase()}
-            </div>
+            <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
             <div>
               <span className="author-name">{post.author?.fullName}</span>
               <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
@@ -58,7 +50,10 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
               {liked ? "❤️" : "🤍"} {post.likes?.length || 0}
             </button>
             {isOwner && (
-              <button className="delete-btn" onClick={() => onDelete(post._id)}>🗑️</button>
+              <>
+                <button className="edit-btn" onClick={() => navigate(`/edit-post/${post._id}`)}>✏️</button>
+                <button className="delete-btn" onClick={() => onDelete(post._id)}>🗑️</button>
+              </>
             )}
           </div>
         </div>
@@ -98,9 +93,7 @@ function Home() {
   const handleLike = async (postId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.put(`${API}/posts/${postId}/like`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.put(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
       fetchPosts();
     } catch {}
   };
@@ -109,9 +102,7 @@ function Home() {
     if (!window.confirm("Delete this post?")) return;
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${API}/posts/${postId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(`${API}/posts/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
       fetchPosts();
     } catch {}
   };
@@ -137,11 +128,7 @@ function Home() {
               ⭐ Register as Artisan/NGO
             </button>
           )}
-          {/* Profile button — shows username + role, no logout here */}
-          <button
-            className="profile-btn"
-            onClick={() => navigate(`/profile/${user._id}`)}
-          >
+          <button className="profile-btn" onClick={() => navigate(`/profile/${user._id}`)}>
             <span className="profile-btn-name">👤 {user.username}</span>
           </button>
         </div>
@@ -163,18 +150,9 @@ function Home() {
         </div>
 
         <div className="filters-bar">
-          <input
-            className="search-input"
-            type="text"
-            placeholder="Search posts, tags, content..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select
-            className="category-select"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
+          <input className="search-input" type="text" placeholder="Search posts, tags, content..."
+            value={search} onChange={(e) => setSearch(e.target.value)} />
+          <select className="category-select" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="">All Categories</option>
             <option value="event">🎪 Events</option>
             <option value="artwork">🎨 Artwork</option>
@@ -185,29 +163,17 @@ function Home() {
         </div>
 
         {loading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading cultural posts...</p>
-          </div>
+          <div className="loading-state"><div className="spinner"></div><p>Loading cultural posts...</p></div>
         ) : posts.length === 0 ? (
           <div className="empty-state">
-            <span>🪷</span>
             <h3>No posts found</h3>
             <p>{user.role !== "user" ? "Be the first to share something cultural!" : "No posts yet — check back soon!"}</p>
-            {user.role !== "user" && (
-              <button onClick={() => navigate("/create-post")}>Create First Post</button>
-            )}
+            {user.role !== "user" && <button onClick={() => navigate("/create-post")}>Create First Post</button>}
           </div>
         ) : (
           <div className="posts-grid">
             {posts.map((post) => (
-              <PostCard
-                key={post._id}
-                post={post}
-                currentUser={user}
-                onLike={handleLike}
-                onDelete={handleDelete}
-              />
+              <PostCard key={post._id} post={post} currentUser={user} onLike={handleLike} onDelete={handleDelete} />
             ))}
           </div>
         )}

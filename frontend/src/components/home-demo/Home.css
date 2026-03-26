@@ -149,3 +149,9 @@
   .welcome-banner { flex-direction: column; gap: 16px; padding: 24px; }
   .posts-grid { grid-template-columns: 1fr; }
 }
+.edit-btn {
+  background: none; border: 1px solid #e0d4c8; border-radius: 20px;
+  padding: 5px 10px; cursor: pointer; font-size: 13px; color: #6c9a9e;
+  transition: 0.2s;
+}
+.edit-btn:hover { background: rgba(108,154,158,0.1); border-color: #6c9a9e; }

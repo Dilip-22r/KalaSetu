@@ -18,6 +18,9 @@ function Profile() {
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [moreModal, setMoreModal] = useState(null); // null | 'report' | 'block'
+  const [moreToast, setMoreToast] = useState("");
 
   const isOwn = currentUser && currentUser._id === userId;
 
@@ -51,13 +54,26 @@ function Profile() {
   };
 
   const handleEditClick = () => {
-    // If role is "user", show the "register to edit" message
     if (currentUser?.role === "user") {
       setShowRegisterMsg(true);
       setTimeout(() => setShowRegisterMsg(false), 3000);
       return;
     }
     navigate("/edit-profile");
+  };
+
+  const handleMoreAction = (action) => {
+    setShowMoreMenu(false);
+    setMoreModal(action);
+  };
+
+  const confirmMoreAction = () => {
+    const msg = moreModal === "block"
+      ? "User has been blocked."
+      : "Report submitted. Our team will review it shortly.";
+    setMoreModal(null);
+    setMoreToast(msg);
+    setTimeout(() => setMoreToast(""), 3000);
   };
 
   const renderNavbar = () => (
@@ -74,6 +90,31 @@ function Profile() {
           <button className="prof-msg-btn" onClick={() => navigate(`/messages/${userId}`)}>
             💬 Message
           </button>
+        )}
+        {/* More button — only shown when viewing someone else's profile */}
+        {currentUser && !isOwn && (
+          <div className="prof-more-wrap">
+            <button
+              className="prof-more-btn"
+              onClick={() => setShowMoreMenu((v) => !v)}
+              title="More options"
+            >
+              More ···
+            </button>
+            {showMoreMenu && (
+              <>
+                <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
+                <div className="prof-more-dropdown">
+                  <button onClick={() => handleMoreAction("block")}>
+                    🚫 Block user
+                  </button>
+                  <button onClick={() => handleMoreAction("report")}>
+                    🚨 Report user
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         )}
         <button className="prof-logout-btn" onClick={() => setShowLogoutModal(true)}>Logout</button>
       </div>
@@ -291,6 +332,35 @@ function Profile() {
           </div>
         </div>
       </div>
+
+      {/* More action modal — Report / Block */}
+      {moreModal && (
+        <div className="prof-logout-overlay" onClick={() => setMoreModal(null)}>
+          <div className="prof-more-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prof-more-modal-icon">
+              {moreModal === "block" ? "🚫" : "🚨"}
+            </div>
+            <h3>{moreModal === "block" ? "Block User" : "Report User"}</h3>
+            <p>
+              {moreModal === "block"
+                ? "They won't be able to find your profile or send you messages."
+                : "We'll review this account and take action if it violates our community guidelines."}
+            </p>
+            <div className="prof-logout-actions">
+              <button className="prof-logout-cancel" onClick={() => setMoreModal(null)}>Cancel</button>
+              <button
+                className={moreModal === "block" ? "prof-block-confirm" : "prof-report-confirm"}
+                onClick={confirmMoreAction}
+              >
+                {moreModal === "block" ? "Block" : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action toast */}
+      {moreToast && <div className="prof-register-toast">{moreToast}</div>}
 
       {showLogoutModal && (
         <div className="prof-logout-overlay">

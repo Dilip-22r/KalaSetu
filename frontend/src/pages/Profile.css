@@ -16,6 +16,64 @@
 .prof-msg-btn { background: #d18364 !important; }
 .prof-logout-btn { background: rgba(255,255,255,0.15) !important; border: 1px solid rgba(255,255,255,0.5) !important; }
 
+/* More button + dropdown */
+.prof-more-wrap { position: relative; }
+.prof-more-btn {
+  padding: 7px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.55) !important;
+  font-size: 12px; background: rgba(255,255,255,0.15) !important; color: #fff;
+  cursor: pointer; transition: 0.2s; font-family: inherit;
+  letter-spacing: 0.5px;
+}
+.prof-more-btn:hover { background: rgba(255,255,255,0.28) !important; }
+
+.prof-more-overlay {
+  position: fixed; inset: 0; z-index: 199;
+}
+.prof-more-dropdown {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+  min-width: 180px; overflow: hidden;
+  z-index: 200;
+  animation: dropIn 0.15s ease;
+}
+@keyframes dropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.prof-more-dropdown button {
+  display: block; width: 100%; padding: 12px 18px;
+  background: transparent !important; color: #333 !important;
+  border: none !important; border-radius: 0 !important;
+  text-align: left; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s;
+  border-bottom: 1px solid #f5f5f5 !important;
+}
+.prof-more-dropdown button:last-child { border-bottom: none !important; }
+.prof-more-dropdown button:hover { background: #faf7f3 !important; color: #2d2d2d !important; }
+
+/* Report / Block confirmation modal */
+.prof-more-modal {
+  background: white; width: 360px; max-width: 92%;
+  padding: 32px 30px 28px; border-radius: 18px; text-align: center;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.22);
+  animation: slideIn 0.25s ease;
+}
+.prof-more-modal-icon { font-size: 44px; margin-bottom: 10px; }
+.prof-more-modal h3 { color: #2d2d2d; font-size: 19px; margin: 0 0 10px; }
+.prof-more-modal p { color: #777; font-size: 13px; line-height: 1.6; margin: 0 0 22px; }
+.prof-block-confirm {
+  background: #e74c3c !important; color: #fff !important;
+  border: none !important; padding: 10px 24px !important;
+  border-radius: 20px !important; cursor: pointer;
+  font-weight: 600; font-size: 14px; transition: 0.2s;
+}
+.prof-block-confirm:hover { background: #c0392b !important; }
+.prof-report-confirm {
+  background: #e67e22 !important; color: #fff !important;
+  border: none !important; padding: 10px 24px !important;
+  border-radius: 20px !important; cursor: pointer;
+  font-weight: 600; font-size: 14px; transition: 0.2s;
+}
+.prof-report-confirm:hover { background: #ca6f1e !important; }
+
 /* Toast notification */
 .prof-register-toast {
   position: fixed; top: 80px; left: 50%; transform: translateX(-50%);

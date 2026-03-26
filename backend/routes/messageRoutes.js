@@ -1,11 +1,20 @@
 import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
-import { Profile } from "../models/Profile.js";
 import jwt from "jsonwebtoken";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
+
+const optionalAuth = (req, res, next) => {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith("Bearer ")) {
+    try {
+      req.user = jwt.verify(auth.split(" ")[1], process.env.JWT_SECRET);
+    } catch {}
+  }
+  next();
+};
 
 const requireAuth = (req, res, next) => {
   const auth = req.headers.authorization;
@@ -37,6 +46,7 @@ const requireRole = async (req, res, next) => {
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
   try {
     const userId = req.user.id;
+    const { Profile } = await import("../models/Profile.js");
     const messages = await Message.find({
       $or: [{ sender: userId }, { receiver: userId }],
     })
@@ -44,14 +54,12 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
       .populate("receiver", "username fullName role")
       .sort({ createdAt: -1 });
 
-    // Build unique conversation partners
     const seen = new Set();
     const conversations = [];
     for (const msg of messages) {
       const partner = msg.sender._id.toString() === userId ? msg.receiver : msg.sender;
       if (!seen.has(partner._id.toString())) {
         seen.add(partner._id.toString());
-        // Attach the partner's profile photo if they have one
         const partnerProfile = await Profile.findOne({ user: partner._id }).select("photo");
         const partnerWithPhoto = { ...partner.toObject(), photo: partnerProfile?.photo || "" };
         conversations.push({ partner: partnerWithPhoto, lastMessage: msg });
@@ -63,7 +71,7 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
   }
 });
 
-// GET messages between two users
+// GET messages between two users — also marks them as delivered then seen
 router.get("/:userId", requireAuth, requireRole, async (req, res) => {
   try {
     const messages = await Message.find({
@@ -75,11 +83,17 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
       .populate("sender", "username fullName")
       .sort({ createdAt: 1 });
 
-    // Mark as read
+    // Upgrade all messages sent TO the current user that weren't seen yet → "seen"
     await Message.updateMany(
-      { sender: req.params.userId, receiver: req.user.id, read: false },
-      { read: true }
+      { sender: req.params.userId, receiver: req.user.id, status: { $ne: "seen" } },
+      { status: "seen" }
     );
+
+    // Notify the partner that their messages have been seen
+    const partnerSocketId = getReceiverSocketId(req.params.userId);
+    if (partnerSocketId) {
+      io.to(partnerSocketId).emit("message_seen", { partnerId: req.user.id });
+    }
 
     res.json(messages);
   } catch (err) {
@@ -91,19 +105,29 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {
     const { receiverId, text } = req.body;
+
+    // Check if receiver is online — start at "delivered", else "sent"
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    const initialStatus = receiverSocketId ? "delivered" : "sent";
+
     const msg = new Message({
       sender: req.user.id,
       receiver: receiverId,
       text,
+      status: initialStatus,
     });
     await msg.save();
     const populated = await msg.populate("sender", "username fullName");
 
-    // Realtime Socket Payload Push
-    const receiverSocketId = getReceiverSocketId(receiverId);
+    // Push message to receiver in real time
     if (receiverSocketId) {
-      // io.to() acts specifically on one unique socket instance
       io.to(receiverSocketId).emit("newMessage", populated);
+    }
+
+    // Tell the SENDER whether it was delivered (so their tick can update)
+    const senderSocketId = getReceiverSocketId(req.user.id);
+    if (senderSocketId && initialStatus === "delivered") {
+      io.to(senderSocketId).emit("message_delivered", { messageId: populated._id.toString() });
     }
 
     res.status(201).json(populated);

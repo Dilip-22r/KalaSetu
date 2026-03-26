@@ -7,6 +7,21 @@ import "./Messages.css";
 
 const API = "http://localhost:5000";
 
+// ── MessageTick ──────────────────────────────────────────────────────────────
+// Renders WhatsApp-style delivery/read ticks on the sender's messages.
+// sent      → single gray ✓
+// delivered → double gray ✓✓
+// seen      → double blue ✓✓
+function MessageTick({ status }) {
+  if (status === "seen") {
+    return <span className="msg-tick seen" title="Seen">✓✓</span>;
+  }
+  if (status === "delivered") {
+    return <span className="msg-tick delivered" title="Delivered">✓✓</span>;
+  }
+  return <span className="msg-tick sent" title="Sent">✓</span>;
+}
+
 function Messages() {
   const navigate = useNavigate();
   const { userId: paramUserId } = useParams();
@@ -16,9 +31,9 @@ function Messages() {
   const [conversations, setConversations] = useState([]);
   const [activeUserId, setActiveUserId] = useState(paramUserId || null);
   const [activeUser, setActiveUser] = useState(null);
-  
+
   // Zustand States
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, socket } = useAuthStore();
   const { messages, setMessages, setSelectedUserId, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
 
   const [text, setText] = useState("");
@@ -38,7 +53,7 @@ function Messages() {
         </nav>
         <div className="msg-locked">
           <span>💬</span>
-          <h2>Messaging is for Artisans & NGOs</h2>
+          <h2>Messaging is for Artisans &amp; NGOs</h2>
           <p>Register as an Artisan or NGO to unlock messaging and connect with the community.</p>
           {user ? (
             <button onClick={() => navigate("/register")}>Register Now</button>
@@ -51,18 +66,16 @@ function Messages() {
   }
 
   useEffect(() => { fetchConversations(); }, []);
-  
-  useEffect(() => { 
+
+  useEffect(() => {
     if (activeUserId) {
       setSelectedUserId(activeUserId);
-      openConversation(activeUserId); 
+      openConversation(activeUserId);
     }
   }, [activeUserId, setSelectedUserId]);
 
   useEffect(() => {
     subscribeToMessages();
-
-    // Cleanup function to prevent memory leaks or duplicate messages
     return () => unsubscribeFromMessages();
   }, [subscribeToMessages, unsubscribeFromMessages]);
 
@@ -81,11 +94,19 @@ function Messages() {
 
   const openConversation = async (uid) => {
     setActiveUserId(uid);
+    // Sync URL so the conversation survives a page refresh
+    navigate(`/messages/${uid}`, { replace: true });
     try {
       const res = await axios.get(`${API}/messages/${uid}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMessages(res.data);
+
+      // Emit mark_seen so the sender's ticks turn blue in real-time.
+      if (socket?.connected) {
+        socket.emit("mark_seen", { viewerId: user._id, partnerId: uid });
+      }
+
       // find partner info
       const conv = conversations.find(c => c.partner._id === uid);
       if (conv) setActiveUser(conv.partner);
@@ -121,6 +142,8 @@ function Messages() {
   const startNewConversation = (profile) => {
     setActiveUserId(profile.user._id);
     setActiveUser(profile.user);
+    // Sync URL for persistence across refresh
+    navigate(`/messages/${profile.user._id}`, { replace: true });
     setSearchQuery("");
     setSearchResults([]);
   };
@@ -156,7 +179,7 @@ function Messages() {
           <div className="msg-search-wrap">
             <input
               type="text"
-              placeholder="Find artisans & NGOs..."
+              placeholder="Find artisans &amp; NGOs..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               className="msg-search"
@@ -228,7 +251,7 @@ function Messages() {
         <div className="msg-chat">
           {!activeUserId ? (
             <div className="msg-empty-chat">
-              <span>🪷</span>
+              <span>  </span>
               <h3>Select a conversation</h3>
               <p>Choose from the list or search for someone to message</p>
             </div>
@@ -264,7 +287,10 @@ function Messages() {
                       <div key={msg._id || i} className={`msg-bubble-wrap ${isMine ? "mine" : "theirs"}`}>
                         <div className={`msg-bubble ${isMine ? "mine" : "theirs"}`}>
                           <p>{msg.text}</p>
-                          <span className="msg-time">{formatTime(msg.createdAt)}</span>
+                          <div className="msg-bubble-footer">
+                            <span className="msg-time">{formatTime(msg.createdAt)}</span>
+                            {isMine && <MessageTick status={msg.status} />}
+                          </div>
                         </div>
                       </div>
                     );

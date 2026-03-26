@@ -144,7 +144,27 @@
 .msg-bubble.mine { background: linear-gradient(135deg, #6c9a9e, #8fb8b3); color: #fff; border-bottom-right-radius: 4px; }
 .msg-bubble.theirs { background: #f4efea; color: #333; border-bottom-left-radius: 4px; }
 .msg-bubble p { margin: 0 0 4px; }
-.msg-time { font-size: 10px; opacity: 0.65; display: block; text-align: right; }
+
+/* Footer row: timestamp + delivery ticks */
+.msg-bubble-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 2px;
+}
+.msg-time { font-size: 10px; opacity: 0.65; }
+
+/* WhatsApp-style delivery/read ticks (shown only on sender's messages) */
+.msg-tick {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.3s ease;
+}
+.msg-tick.sent     { color: rgba(255,255,255,0.6); }   /* single ✓ — gray-ish on teal */
+.msg-tick.delivered { color: rgba(255,255,255,0.6); }  /* double ✓✓ — same gray */
+.msg-tick.seen      { color: #b2ebf2; }                /* double ✓✓ — light blue */
 
 .msg-input-bar {
   display: flex; gap: 10px; padding: 16px 20px;

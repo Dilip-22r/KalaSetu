@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import { Message } from "../models/Message.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +16,7 @@ export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
-// {userId: socketId} map for incredibly efficient O(1) online user lookups
+// {userId: socketId} map for efficient O(1) online user lookups
 const userSocketMap = {};
 
 io.on("connection", (socket) => {
@@ -26,15 +27,32 @@ io.on("connection", (socket) => {
     userSocketMap[userId] = socket.id;
   }
 
-  // io.emit is used to send events to all connected clients
-  // Instantly push the online statuses Array
+  // Push updated online list to all clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // ── mark_seen ─────────────────────────────────────────────────────────────
+  // Emitted by the receiver when they open a conversation.
+  // Updates all unread messages from partnerId → viewerId to "seen" in DB,
+  // then notifies the partner so their ticks turn blue in real time.
+  socket.on("mark_seen", async ({ viewerId, partnerId }) => {
+    try {
+      await Message.updateMany(
+        { sender: partnerId, receiver: viewerId, status: { $ne: "seen" } },
+        { status: "seen" }
+      );
+
+      const partnerSocketId = getReceiverSocketId(partnerId);
+      if (partnerSocketId) {
+        io.to(partnerSocketId).emit("message_seen", { partnerId: viewerId });
+      }
+    } catch (err) {
+      console.error("mark_seen error:", err.message);
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
     delete userSocketMap[userId];
-    
-    // Broadcast the updated online users array
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });

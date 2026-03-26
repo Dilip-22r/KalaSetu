@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./Landing.css";
 
-const artSymbols = ["🎨","🪘","🎭","🪷","🏺","🎪","🪁","🧵","🪗","🎋","🕌","🪬","🎐","🧿","🪔"];
+const artSymbols = ["🎨","🪘","🎭","🌸","🏺","🪁","🧵","🪗","🎋","🌺","🎐","🧿","🪔","🥁","🎻","💫"];
 
 function FloatingSymbol({ symbol, style }) {
   return <span className="float-symbol" style={style}>{symbol}</span>;
@@ -23,8 +23,64 @@ function CountUp({ target, suffix = "" }) {
   return <span>{count.toLocaleString()}{suffix}</span>;
 }
 
+const MODAL_CONTENT = {
+  terms: {
+    title: "Terms of Service",
+    body: [
+      { heading: "1. Acceptance", text: "By creating an account on KalaSetu, you agree to these Terms of Service." },
+      { heading: "2. Eligibility", text: "You must be at least 13 years old to use KalaSetu. By registering, you confirm that the information you provide is accurate and complete." },
+      { heading: "3. User Conduct", text: "You agree not to post content that is harmful, offensive, or violates any applicable law. KalaSetu reserves the right to remove content or suspend accounts that violate these terms." },
+      { heading: "4. Intellectual Property", text: "All content you post remains yours. By posting on KalaSetu, you grant us a non-exclusive license to display it on the platform. You must not post content that infringes on others' intellectual property." },
+      { heading: "5. Termination", text: "We reserve the right to suspend or terminate your account at any time for violations of these terms. You may also delete your account at any time." },
+      { heading: "6. Changes", text: "We may update these terms from time to time. Continued use of KalaSetu after changes constitutes acceptance of the new terms." },
+    ]
+  },
+  privacy: {
+    title: "Privacy Policy",
+    body: [
+      { heading: "1. Information We Collect", text: "We collect your name, email, username, and profile details you provide during registration and profile setup." },
+      { heading: "2. How We Use It", text: "Your information is used to operate the platform, personalise your experience, and enable communication between users. We do not sell your data to third parties." },
+      { heading: "3. Data Storage", text: "Your data is stored securely in our database. Passwords are hashed using bcrypt and are never stored in plain text." },
+      { heading: "4. Cookies", text: "KalaSetu uses JWT tokens stored in your browser for authentication. We do not use third-party tracking cookies." },
+      { heading: "5. Your Rights", text: "You can update or delete your profile information at any time. To request full account deletion, contact us directly." },
+      { heading: "6. Contact", text: "For any privacy-related concerns, reach out to us at support@kalasetu.in." },
+    ]
+  }
+};
+
+function PolicyModal({ type, onClose }) {
+  const { title, body } = MODAL_CONTENT[type];
+  return (
+    <div className="l-modal-overlay" onClick={onClose}>
+      <div className="l-modal" onClick={e => e.stopPropagation()}>
+        <div className="l-modal-header">
+          <h3>{title}</h3>
+          <button className="l-modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="l-modal-body">
+          {body.map((section, i) => (
+            <div key={i} className="l-modal-section">
+              <h4>{section.heading}</h4>
+              <p>{section.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Landing() {
   const navigate = useNavigate();
+  const [showTop, setShowTop] = useState(false);
+  const [modal, setModal] = useState(null);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 300);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const [symbols] = useState(() =>
     Array.from({ length: 18 }, (_, i) => ({
       symbol: artSymbols[i % artSymbols.length],
@@ -49,7 +105,7 @@ function Landing() {
       {/* Navbar */}
       <nav className="l-nav">
         <div className="l-brand">
-          <span className="l-brand-icon">🪷</span>
+          <span className="l-brand-icon">🌸</span>
           <span className="l-brand-name">KalaSetu</span>
         </div>
         <div className="l-nav-links">
@@ -71,11 +127,10 @@ function Landing() {
       {/* Hero */}
       <section className="l-hero">
         <div className="l-hero-left">
-          <div className="l-badge">🇮🇳 India's Cultural Bridge</div>
-          <h1 className="l-hero-title">
+          <h3 className="l-hero-title">
             Where <span className="l-accent">Art</span> Finds<br />
             Its <span className="l-accent-2">Voice</span>
-          </h1>
+          </h3>
           <p className="l-hero-sub">
             KalaSetu connects traditional artisans, NGOs, and culture lovers
             across India — preserving heritage, one story at a time.
@@ -89,7 +144,7 @@ function Landing() {
             </button>
           </div>
           <p className="l-terms">
-            By joining, you agree to our <span>Terms</span> & <span>Privacy Policy</span>
+            By joining, you agree to our <span onClick={() => setModal("terms")}>Terms</span> & <span onClick={() => setModal("privacy")}>Privacy Policy</span>
           </p>
         </div>
 
@@ -116,12 +171,12 @@ function Landing() {
               <small>Rajasthan, India</small>
             </div>
             <div className="l-art-card l-card-5">
-              <span>🎭</span>
+              <span>💃</span>
               <p>Kathakali Dance</p>
               <small>Kerala, India</small>
             </div>
             <div className="l-art-card l-card-6">
-              <span>🪷</span>
+              <span>🌸</span>
               <p>Rangoli Art</p>
               <small>All of India</small>
             </div>
@@ -157,7 +212,7 @@ function Landing() {
         <div className="l-section-tag">Why KalaSetu?</div>
         <h2 className="l-section-title">Everything you need to<br />share your culture</h2>
         <div className="l-features-grid">
-          <div className="l-feature-card">
+          <div className="l-feature-card l-feature-highlight">
             <div className="l-feature-icon">🎨</div>
             <h3>Showcase Your Art</h3>
             <p>Create a rich profile with your skills, location, and cultural story. Let the world discover your craft.</p>
@@ -167,12 +222,12 @@ function Landing() {
             <h3>Connect & Collaborate</h3>
             <p>Message artisans, partner with NGOs, and build meaningful relationships that grow your reach.</p>
           </div>
-          <div className="l-feature-card">
+          <div className="l-feature-card l-feature-highlight">
             <div className="l-feature-icon">📢</div>
             <h3>Promote Events</h3>
             <p>Announce workshops, cultural events, and exhibitions to a passionate community that cares.</p>
           </div>
-          <div className="l-feature-card">
+          <div className="l-feature-card l-feature-highlight">
             <div className="l-feature-icon">🔍</div>
             <h3>Discover Creators</h3>
             <p>Search artisans and NGOs by skill, location, or art form. Find inspiration from across India.</p>
@@ -182,7 +237,7 @@ function Landing() {
             <h3>Preserve Heritage</h3>
             <p>Every post, every story, every connection helps keep India's traditional art forms alive and thriving.</p>
           </div>
-          <div className="l-feature-card">
+          <div className="l-feature-card l-feature-highlight">
             <div className="l-feature-icon">⭐</div>
             <h3>Free to Join</h3>
             <p>Sign up as a user, then upgrade to Artisan or NGO for free. No hidden fees, ever.</p>
@@ -225,6 +280,15 @@ function Landing() {
         </div>
       </section>
 
+      {modal && <PolicyModal type={modal} onClose={() => setModal(null)} />}
+
+      {/* Scroll to Top */}
+      {showTop && (
+        <button className="l-scroll-top" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Scroll to top">
+          ▲
+        </button>
+      )}
+
       {/* CTA Banner */}
       <section className="l-cta-banner">
         <div className="l-cta-banner-content">
@@ -240,12 +304,6 @@ function Landing() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="l-footer">
-        <div className="l-footer-brand">🪷 KalaSetu</div>
-        <p>© 2025 KalaSetu — Celebrating India's living heritage.</p>
-      </footer>
     </div>
   );
 }

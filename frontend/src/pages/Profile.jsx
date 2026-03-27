@@ -47,6 +47,17 @@ function Profile() {
     } catch { setPosts([]); }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm("Delete this post?")) return;
+    const previousPosts = [...posts];
+    setPosts(posts.filter(p => p._id !== postId)); 
+    try {
+      await axios.delete(`${API}/posts/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
+    } catch {
+      setPosts(previousPosts);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     useAuthStore.getState().setAuthUser(null);
@@ -322,7 +333,27 @@ function Profile() {
                             day: "numeric", month: "short", year: "numeric",
                           })}
                         </span>
-                        <span className="prof-post-likes">❤️ {post.likes?.length || 0}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span className="prof-post-likes">❤️ {post.likes?.length || 0}</span>
+                          {isOwn && (
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <button 
+                                onClick={() => navigate(`/edit-post/${post._id}`)} 
+                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: 0 }}
+                                title="Edit Post"
+                              >
+                                ✏️
+                              </button>
+                              <button 
+                                onClick={() => handleDeletePost(post._id)}
+                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: 0 }}
+                                title="Delete Post"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

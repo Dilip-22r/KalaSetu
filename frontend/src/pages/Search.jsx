@@ -28,7 +28,11 @@ function Search() {
       if (search) params.search = search;
       if (typeFilter) params.type = typeFilter;
       const res = await axios.get(`${API}/profiles/creators`, { params });
-      setResults(res.data);
+      // Filter out the logged-in user's own profile
+      const filtered = user
+        ? res.data.filter(p => p.user?._id !== user._id)
+        : res.data;
+      setResults(filtered);
     } catch { setResults([]); }
     setLoading(false);
   };
@@ -146,10 +150,7 @@ function Search() {
                     <h3>{post.title}</h3>
                     <p>{post.content}</p>
                     <div className="s-post-meta">
-                      <span
-                        className="s-post-author"
-                        onClick={() => navigate(`/profile/${post.author?._id}`)}
-                      >
+                      <span className="s-post-author" onClick={() => navigate(`/profile/${post.author?._id}`)}>
                         by {post.author?.fullName}
                       </span>
                       <span className="s-post-likes">❤️ {post.likes?.length || 0}</span>

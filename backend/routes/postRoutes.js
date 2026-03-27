@@ -1,46 +1,11 @@
 import express from "express";
 import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
-import jwt from "jsonwebtoken";
+import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Middleware to get user from token (optional auth)
-const optionalAuth = (req, res, next) => {
-  const auth = req.headers.authorization;
-  if (auth && auth.startsWith("Bearer ")) {
-    try {
-      req.user = jwt.verify(auth.split(" ")[1], process.env.JWT_SECRET);
-    } catch {}
-  }
-  next();
-};
 
-const requireAuth = (req, res, next) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-  try {
-    req.user = jwt.verify(auth.split(" ")[1], process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
-
-const requireRole = async (req, res, next) => {
-  try {
-    const dbUser = await User.findById(req.user.id).select("role");
-    if (!dbUser || dbUser.role === "user") {
-      return res.status(403).json({ message: "Only artisans and NGOs can perform this action" });
-    }
-    req.user.role = dbUser.role; // keep in sync
-    next();
-  } catch {
-    res.status(500).json({ message: "Server error checking role" });
-  }
-};
 
 // GET all posts (public) with optional search
 router.get("/", optionalAuth, async (req, res) => {
@@ -120,6 +85,26 @@ router.put("/:id/like", requireAuth, async (req, res) => {
     else post.likes.splice(idx, 1);
     await post.save();
     res.json({ likes: post.likes.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// EDIT post (author only)
+router.put("/:id", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    if (post.author.toString() !== req.user.id) return res.status(403).json({ message: "Not your post" });
+    const { title, content, category, tags, image } = req.body;
+    post.title = title ?? post.title;
+    post.content = content ?? post.content;
+    post.category = category ?? post.category;
+    post.tags = tags ?? post.tags;
+    post.image = image ?? post.image;
+    await post.save();
+    const populated = await post.populate("author", "username fullName role");
+    res.json(populated);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -9,6 +9,7 @@ function SignIn() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { setAuthUser } = useAuthStore();
@@ -33,7 +34,8 @@ function SignIn() {
       setAuthUser(response.data.user);
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      navigate("/home");
+      setSuccess("✅ Signed in successfully! Redirecting...");
+      setTimeout(() => navigate("/home"), 1200);
     } catch (err) {
       setError(err.response?.data?.message || "Invalid credentials");
     }
@@ -59,6 +61,7 @@ function SignIn() {
           </div>
 
           {error && <div className="si-error">{error}</div>}
+          {success && <div className="si-success">{success}</div>}
 
           <form onSubmit={handleSignIn} className="si-form">
             <div className="si-field">

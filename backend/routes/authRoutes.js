@@ -50,10 +50,11 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    const { password: _, ...safeUser } = user.toObject();
     res.json({
       message: "Login successful",
       token,
-      user,
+      user: safeUser,
     });
 
   } catch (error) {
@@ -94,5 +95,16 @@ router.put("/upgrade-role", async (req, res) => {
   }
 });
 
+
+// GET user by ID (for messaging context)
+router.get("/user/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 export default router;

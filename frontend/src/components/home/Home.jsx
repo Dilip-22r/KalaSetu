@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./Home.css";
+import { useNotificationStore } from "../../store/useNotificationStore";
 
 const API = "http://localhost:5000";
 
@@ -64,11 +65,40 @@ function Home() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { notifications, unreadCount, fetchNotifications, markAsRead, subscribeToNotifications, unsubscribeFromNotifications, hasMore, page } = useNotificationStore();
+  const dropdownRef = useRef(null);
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (!stored) { navigate("/signin"); return; }
     setUser(JSON.parse(stored));
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications(1);
+      subscribeToNotifications();
+      return () => unsubscribeFromNotifications();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleBellClick = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      markAsRead();
+    }
+  };
 
   useEffect(() => { fetchPosts(); }, [search, category]);
 
@@ -133,6 +163,46 @@ function Home() {
       <nav className="navbar">
         <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
         <div className="nav-buttons">
+          <div className="notification-wrapper" ref={dropdownRef}>
+            <button className="bell-btn" onClick={handleBellClick}>
+              🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
+            </button>
+            {showNotifications && (
+              <div className="notification-dropdown">
+                <h4>Notifications</h4>
+                {notifications.length === 0 ? (
+                  <p className="no-notif">No new notifications</p>
+                ) : (
+                  <div className="notif-list">
+                    {notifications.map(n => (
+                      <div 
+                        key={n._id} 
+                        className={`notif-card ${!n.read ? "unread" : ""}`}
+                        onClick={() => {
+                          if (n.type === 'message') {
+                            navigate(`/messages/${n.sender?._id}`);
+                            setShowNotifications(false);
+                          }
+                        }}
+                        style={{ cursor: n.type === 'message' ? 'pointer' : 'default' }}
+                      >
+                        <div className="notif-avatar">{n.sender?.username?.[0]?.toUpperCase()}</div>
+                        <div className="notif-content">
+                          <p><strong>{n.sender?.username}</strong> {n.type === 'like' ? 'liked your post' : 'sent you a message'}</p>
+                          <small>{new Date(n.createdAt).toLocaleDateString()}</small>
+                        </div>
+                      </div>
+                    ))}
+                    {hasMore && (
+                       <button className="load-more-btn" onClick={() => fetchNotifications(page + 1)}>
+                         Load More
+                       </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <button onClick={() => navigate("/search")}>🔍 Explore</button>
           {user.role !== "user" && (
             <>

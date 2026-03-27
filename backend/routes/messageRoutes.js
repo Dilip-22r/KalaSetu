@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { Notification } from "../models/Notification.js";
 
 const router = express.Router();
 
@@ -139,6 +140,18 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     ]);
 
     if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populated);
+
+    // Create Notification
+    const newNotif = new Notification({
+      recipient: receiverId,
+      sender: req.user.id,
+      type: "message",
+      message: msg._id,
+    });
+    await newNotif.save();
+    const populatedNotif = await newNotif.populate("sender", "username fullName profilePic");
+    
+    if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populatedNotif);
 
     const senderSocketId = getReceiverSocketId(req.user.id);
     if (senderSocketId && initialStatus === "delivered") {

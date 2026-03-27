@@ -315,3 +315,63 @@
 .prof-logout-confirm:hover {
   background: #c0392b !important;
 }
+
+/* Likes formatting */
+.prof-likes-count {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.prof-likes-count:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.prof-likes-modal {
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow: hidden;
+}
+.prof-likes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0ebe4;
+  background: #fdfdfd;
+}
+.prof-likes-header button {
+  background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #888; padding: 4px;
+}
+.prof-likes-header button:hover { color: #333; }
+.prof-likes-body {
+  padding: 10px 0;
+  overflow-y: auto;
+}
+.prof-likers-list {
+  display: flex;
+  flex-direction: column;
+}
+.prof-liker-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.prof-liker-item:hover {
+  background: #fdfdfd;
+}
+.prof-liker-avatar {
+  background: linear-gradient(135deg, #d18364, #e8a58a);
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #fff; font-size: 1.1rem; flex-shrink: 0;
+}
+.prof-liker-info { display: flex; flex-direction: column; }
+.prof-liker-username { font-weight: 600; color: #333; font-size: 0.95rem; }
+.prof-liker-name { color: #888; font-size: 0.8rem; }

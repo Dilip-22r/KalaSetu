@@ -281,3 +281,123 @@
 .load-more-btn:hover {
   background: #e0d4c8;
 }
+
+/* LIKES MODAL CSS */
+.likes-count {
+  cursor: pointer;
+  padding-left: 4px;
+}
+
+.likes-count:hover {
+  text-decoration: underline;
+}
+
+.likes-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px);
+}
+
+.likes-modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.2s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.likes-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0ebe4;
+  background: #fdfdfd;
+}
+
+.likes-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+}
+
+.close-modal-btn:hover {
+  color: #333;
+}
+
+.likes-modal-body {
+  padding: 10px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.likers-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.liker-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.liker-item:hover {
+  background: #fdfdfd;
+}
+
+.liker-avatar {
+  background: linear-gradient(135deg, #d18364, #e8a58a);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.liker-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.liker-username {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.liker-fullname {
+  color: #888;
+  font-size: 0.8rem;
+}

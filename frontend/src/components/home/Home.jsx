@@ -10,8 +10,23 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const isOwner = post.author?._id === currentUser?._id;
+  const [showLikesModal, setShowLikesModal] = useState(false);
+  const [likers, setLikers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
 
   const categoryEmoji = { event: "🎪", artwork: "🎨", story: "📖", workshop: "🛠️", announcement: "📢" };
+
+  const handleLikesClick = async (e) => {
+    e.stopPropagation();
+    if (post.likes?.length === 0) return;
+    setShowLikesModal(true);
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${post._id}/likes`);
+      setLikers(res.data);
+    } catch (err) { console.error(err); }
+    setLoadingLikes(false);
+  };
 
   return (
     <div className="post-card">
@@ -48,11 +63,36 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
               onClick={() => onLike(post._id)}
               disabled={!currentUser}
             >
-              {liked ? "❤️" : "🤍"} {post.likes?.length || 0}
+              {liked ? "❤️" : "🤍"} <span onClick={handleLikesClick} className="likes-count">{post.likes?.length || 0}</span>
             </button>
           </div>
         </div>
       </div>
+      {showLikesModal && (
+        <div className="likes-modal-overlay" onClick={() => setShowLikesModal(false)}>
+          <div className="likes-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="likes-modal-header">
+              <h3>Likes</h3>
+              <button className="close-modal-btn" onClick={() => setShowLikesModal(false)}>✕</button>
+            </div>
+            <div className="likes-modal-body">
+              {loadingLikes ? <div className="spinner"></div> : (
+                <div className="likers-list">
+                  {likers.map(u => (
+                     <div key={u._id} className="liker-item" onClick={() => navigate(`/profile/${u._id}`)}>
+                        <div className="liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
+                        <div className="liker-info">
+                          <span className="liker-username">{u.username}</span>
+                          <span className="liker-fullname">{u.fullName}</span>
+                        </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

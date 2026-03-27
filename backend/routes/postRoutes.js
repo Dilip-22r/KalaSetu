@@ -42,6 +42,17 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// GET post likers
+router.get("/:id/likes", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate("likes", "username fullName profilePic");
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.likes);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // CREATE post (artisan/ngo only)
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {

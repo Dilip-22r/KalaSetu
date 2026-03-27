@@ -6,27 +6,12 @@ import { useNotificationStore } from "../../store/useNotificationStore";
 
 const API = "http://localhost:5000";
 
-function PostCard({ post, currentUser, onLike, onDelete }) {
+function PostCard({ post, currentUser, onLike, onDelete, onShowLikes }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const isOwner = post.author?._id === currentUser?._id;
-  const [showLikesModal, setShowLikesModal] = useState(false);
-  const [likers, setLikers] = useState([]);
-  const [loadingLikes, setLoadingLikes] = useState(false);
 
   const categoryEmoji = { event: "🎪", artwork: "🎨", story: "📖", workshop: "🛠️", announcement: "📢" };
-
-  const handleLikesClick = async (e) => {
-    e.stopPropagation();
-    if (post.likes?.length === 0) return;
-    setShowLikesModal(true);
-    setLoadingLikes(true);
-    try {
-      const res = await axios.get(`${API}/posts/${post._id}/likes`);
-      setLikers(res.data);
-    } catch (err) { console.error(err); }
-    setLoadingLikes(false);
-  };
 
   return (
     <div className="post-card">
@@ -63,36 +48,11 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
               onClick={() => onLike(post._id)}
               disabled={!currentUser}
             >
-              {liked ? "❤️" : "🤍"} <span onClick={handleLikesClick} className="likes-count">{post.likes?.length || 0}</span>
+              {liked ? "❤️" : "🤍"} <span onClick={(e) => { e.stopPropagation(); onShowLikes(post._id, post.likes?.length || 0); }} className="likes-count">{post.likes?.length || 0}</span>
             </button>
           </div>
         </div>
       </div>
-      {showLikesModal && (
-        <div className="likes-modal-overlay" onClick={() => setShowLikesModal(false)}>
-          <div className="likes-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="likes-modal-header">
-              <h3>Likes</h3>
-              <button className="close-modal-btn" onClick={() => setShowLikesModal(false)}>✕</button>
-            </div>
-            <div className="likes-modal-body">
-              {loadingLikes ? <div className="spinner"></div> : (
-                <div className="likers-list">
-                  {likers.map(u => (
-                     <div key={u._id} className="liker-item" onClick={() => navigate(`/profile/${u._id}`)}>
-                        <div className="liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
-                        <div className="liker-info">
-                          <span className="liker-username">{u.username}</span>
-                          <span className="liker-fullname">{u.fullName}</span>
-                        </div>
-                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -105,9 +65,24 @@ function Home() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
 
+  const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likers, setLikers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const { notifications, unreadCount, fetchNotifications, markAsRead, subscribeToNotifications, unsubscribeFromNotifications, hasMore, page } = useNotificationStore();
   const dropdownRef = useRef(null);
+
+  const handleLikesClick = async (postId, likesCount) => {
+    if (likesCount === 0) return;
+    setLikesModalPostId(postId);
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/likes`);
+      setLikers(res.data);
+    } catch (err) { }
+    setLoadingLikes(false);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -300,11 +275,37 @@ function Home() {
         ) : (
           <div className="posts-grid">
             {posts.map((post) => (
-              <PostCard key={post._id} post={post} currentUser={user} onLike={handleLike} onDelete={handleDelete} />
+              <PostCard key={post._id} post={post} currentUser={user} onLike={handleLike} onDelete={handleDelete} onShowLikes={handleLikesClick} />
             ))}
           </div>
         )}
       </div>
+
+      {likesModalPostId && (
+        <div className="likes-modal-overlay" onClick={() => setLikesModalPostId(null)}>
+          <div className="likes-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="likes-modal-header">
+              <h3>Likes</h3>
+              <button className="close-modal-btn" onClick={() => setLikesModalPostId(null)}>✕</button>
+            </div>
+            <div className="likes-modal-body">
+              {loadingLikes ? <div className="spinner"></div> : (
+                <div className="likers-list">
+                  {likers.map(u => (
+                     <div key={u._id} className="liker-item" onClick={() => { setLikesModalPostId(null); navigate(`/profile/${u._id}`); }}>
+                        <div className="liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
+                        <div className="liker-info">
+                          <span className="liker-username">{u.username}</span>
+                          <span className="liker-fullname">{u.fullName}</span>
+                        </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

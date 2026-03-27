@@ -2,31 +2,12 @@ import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
-const requireAuth = (req, res, next) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({ message: "Not authorized" });
-  try {
-    req.user = jwt.verify(auth.split(" ")[1], process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
 
-const requireRole = async (req, res, next) => {
-  try {
-    const dbUser = await User.findById(req.user.id).select("role");
-    if (!dbUser || dbUser.role === "user") return res.status(403).json({ message: "Only artisans and NGOs can message" });
-    req.user.role = dbUser.role;
-    next();
-  } catch {
-    res.status(500).json({ message: "Server error checking role" });
-  }
-};
 
 // GET conversations
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {

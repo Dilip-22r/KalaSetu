@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Landing from "./components/landing-demo/Landing";
-import SignUp from "./components/signUp-demo/SignUp";
-import SignIn from "./components/signIn-demo/SignIn";
-import Home from "./components/home-demo/Home";
-import Register from "./components/register-demo/Register";
+import Landing from "./components/landing/Landing";
+import SignUp from "./components/signUp/SignUp";
+import SignIn from "./components/signIn/SignIn";
+import Home from "./components/home/Home";
+import Register from "./components/register/Register";
 import Search from "./pages/Search";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";

@@ -1,22 +1,10 @@
 import express from "express";
 import { Profile } from "../models/Profile.js";
 import { User } from "../models/User.js";
-import jwt from "jsonwebtoken";
+import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-const requireAuth = (req, res, next) => {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized" });
-  }
-  try {
-    req.user = jwt.verify(auth.split(" ")[1], process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
 
 // GET all artisans & NGOs (for search)
 router.get("/creators", async (req, res) => {

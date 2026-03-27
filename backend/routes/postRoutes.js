@@ -125,7 +125,6 @@ router.put("/:id/like", requireAuth, async (req, res) => {
   }
 });
 
-export default router;
 // EDIT post (author only)
 router.put("/:id", requireAuth, async (req, res) => {
   try {
@@ -145,3 +144,5 @@ router.put("/:id", requireAuth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+export default router;

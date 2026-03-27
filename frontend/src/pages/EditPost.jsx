@@ -53,7 +53,7 @@ function EditPost() {
       await axios.put(`${API}/posts/${postId}`, { ...form, tags }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      navigate("/home");
+      navigate(-1); // Go back to profile page where the edit was launched
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update post.");
     }

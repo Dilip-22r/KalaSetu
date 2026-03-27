@@ -24,12 +24,12 @@ export default async function getCroppedImg(imageSrc, pixelCrop) {
   const sw = Math.max(1, Math.round(pixelCrop.width));
   const sh = Math.max(1, Math.round(pixelCrop.height));
 
-  // Always output a fixed 400x400 avatar to keep Base64 size small
-  const OUTPUT = 400;
+  // Base64 payload optimization: limit to 250x250 square avatar frame
+  const OUTPUT = 250;
   canvas.width = OUTPUT;
   canvas.height = OUTPUT;
 
   ctx.drawImage(image, sx, sy, sw, sh, 0, 0, OUTPUT, OUTPUT);
 
-  return canvas.toDataURL("image/jpeg", 0.85);
+  return canvas.toDataURL("image/jpeg", 0.80);
 }

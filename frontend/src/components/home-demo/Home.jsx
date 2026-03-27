@@ -49,12 +49,6 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
             >
               {liked ? "❤️" : "🤍"} {post.likes?.length || 0}
             </button>
-            {isOwner && (
-              <>
-                <button className="edit-btn" onClick={() => navigate(`/edit-post/${post._id}`)}>✏️</button>
-                <button className="delete-btn" onClick={() => onDelete(post._id)}>🗑️</button>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -92,19 +86,42 @@ function Home() {
 
   const handleLike = async (postId) => {
     const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+
+    // Optimistically update the UI instantly without triggering loading spinner
+    setPosts(posts.map(post => {
+      if (post._id === postId) {
+        const isLiked = post.likes.includes(user._id);
+        const updatedLikes = isLiked 
+          ? post.likes.filter(id => id !== user._id) 
+          : [...post.likes, user._id];
+        return { ...post, likes: updatedLikes };
+      }
+      return post;
+    }));
+
     try {
       await axios.put(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      fetchPosts();
-    } catch {}
+    } catch {
+      // Revert if API fails
+      setPosts(previousPosts);
+    }
   };
 
   const handleDelete = async (postId) => {
     if (!window.confirm("Delete this post?")) return;
     const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+
+    // Optimistically remove from UI instantly
+    setPosts(posts.filter(post => post._id !== postId));
+
     try {
       await axios.delete(`${API}/posts/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
-      fetchPosts();
-    } catch {}
+    } catch {
+      // Revert if API fails
+      setPosts(previousPosts);
+    }
   };
 
   if (!user) return null;

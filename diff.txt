@@ -1,0 +1,17 @@
+M	backend/lib/socket.js
+M	backend/models/Message.js
+M	backend/routes/authRoutes.js
+M	backend/routes/messageRoutes.js
+M	backend/routes/postRoutes.js
+M	frontend/src/App.jsx
+M	frontend/src/components/home-demo/Home.css
+M	frontend/src/components/home-demo/Home.jsx
+M	frontend/src/components/signIn-demo/SignIn.css
+M	frontend/src/components/signIn-demo/SignIn.jsx
+M	frontend/src/components/signUp-demo/SignUp.css
+M	frontend/src/components/signUp-demo/SignUp.jsx
+D	frontend/src/pages/EditPost.jsx
+M	frontend/src/pages/Messages.css
+M	frontend/src/pages/Messages.jsx
+M	frontend/src/pages/Search.jsx
+M	frontend/src/store/useChatStore.js

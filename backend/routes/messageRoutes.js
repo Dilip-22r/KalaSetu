@@ -32,32 +32,78 @@ const requireRole = async (req, res, next) => {
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { Profile } = await import("../models/Profile.js");
-    const messages = await Message.find({
-      $or: [{ sender: userId }, { receiver: userId }],
-      deleted: { $ne: true },
-    })
-      .populate("sender", "username fullName role")
-      .populate("receiver", "username fullName role")
-      .sort({ createdAt: -1 });
+    // Aggregation pipeline to replace massive Node.js O(N) filtering
+    const mongoose = (await import("mongoose")).default;
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 20);
 
-    const seen = new Set();
-    const conversations = [];
-    for (const msg of messages) {
-      const senderStr = msg.sender?._id?.toString() ?? msg.sender?.toString();
-      const partner = senderStr === userId ? msg.receiver : msg.sender;
-      if (!partner || !partner._id) continue;
-      const partnerId = partner._id.toString();
-      if (!seen.has(partnerId)) {
-        seen.add(partnerId);
-        const partnerProfile = await Profile.findOne({ user: partner._id }).select("photo");
-        conversations.push({
-          partner: { ...partner.toObject(), photo: partnerProfile?.photo || "" },
-          lastMessage: msg,
-        });
+    const pipeline = [
+      {
+        $match: {
+          $or: [{ sender: userIdObj }, { receiver: userIdObj }],
+          deleted: { $ne: true },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$sender", userIdObj] },
+              "$receiver",
+              "$sender"
+            ]
+          },
+          lastMessage: { $first: "$$ROOT" }
+        }
+      },
+      { $sort: { "lastMessage.createdAt": -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      // Lookup partner details (User)
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "partnerUser"
+        }
+      },
+      { $unwind: "$partnerUser" },
+      // Lookup partner profile photo (Profile)
+      {
+        $lookup: {
+          from: "profiles",
+          localField: "_id",
+          foreignField: "user",
+          as: "partnerProfile"
+        }
+      },
+      {
+        $project: {
+          partner: {
+            _id: "$partnerUser._id",
+            username: "$partnerUser.username",
+            fullName: "$partnerUser.fullName",
+            role: "$partnerUser.role",
+            email: "$partnerUser.email",
+            photo: { $arrayElemAt: ["$partnerProfile.photo", 0] }
+          },
+          lastMessage: 1
+        }
       }
-    }
-    res.json(conversations);
+    ];
+
+    const conversations = await Message.aggregate(pipeline);
+
+    // Format final response to handle any missing profile photos safely
+    const formatted = conversations.map(c => ({
+      partner: { ...c.partner, photo: c.partner.photo || "" },
+      lastMessage: c.lastMessage
+    }));
+
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -160,7 +206,6 @@ router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) =>
   }
 });
 
-export default router;
 
 // DELETE FOR ME only (hides from one side, using hiddenFor array)
 router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
@@ -179,3 +224,5 @@ router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+export default router;

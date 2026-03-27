@@ -13,4 +13,9 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// High-performance compound indexes supporting Phase 3 Aggregation Pipeline searches
+messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
+messageSchema.index({ sender: 1, createdAt: -1 });
+messageSchema.index({ receiver: 1, createdAt: -1 });
+
 export const Message = mongoose.model("Message", messageSchema);

@@ -25,7 +25,7 @@ router.get("/creators", async (req, res) => {
     const userFilter = { role: { $in: ["artisan", "ngo"] } };
     if (type) userFilter.role = type.toLowerCase();
 
-    const users = await User.find(userFilter).select("-password");
+    const users = await User.find(userFilter).select("-password").lean();
     const userIds = users.map((u) => u._id);
 
     const profileFilter = { user: { $in: userIds } };
@@ -37,7 +37,7 @@ router.get("/creators", async (req, res) => {
       ];
     }
 
-    const profiles = await Profile.find(profileFilter).populate("user", "username fullName role email");
+    const profiles = await Profile.find(profileFilter).populate("user", "username fullName role email").lean();
     res.json(profiles);
   } catch (err) {
     res.status(500).json({ message: err.message });

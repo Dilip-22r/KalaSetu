@@ -1,19 +1,15 @@
 import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
-import jwt from "jsonwebtoken";
-import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
-
-
-// GET conversations
-router.get("/conversations", requireAuth, requireRole, async (req, res) => {
+// GET conversations (any authenticated user)
+router.get("/conversations", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    // Aggregation pipeline to replace massive Node.js O(N) filtering
     const mongoose = (await import("mongoose")).default;
     const userIdObj = new mongoose.Types.ObjectId(userId);
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -42,7 +38,6 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
       { $sort: { "lastMessage.createdAt": -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
-      // Lookup partner details (User)
       {
         $lookup: {
           from: "users",
@@ -52,7 +47,6 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
         }
       },
       { $unwind: "$partnerUser" },
-      // Lookup partner profile photo (Profile)
       {
         $lookup: {
           from: "profiles",
@@ -78,7 +72,6 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
 
     const conversations = await Message.aggregate(pipeline);
 
-    // Format final response to handle any missing profile photos safely
     const formatted = conversations.map(c => ({
       partner: { ...c.partner, photo: c.partner.photo || "" },
       lastMessage: c.lastMessage
@@ -90,15 +83,15 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
   }
 });
 
-// GET messages between two users (exclude messages hidden for current user)
-router.get("/:userId", requireAuth, requireRole, async (req, res) => {
+// GET messages between two users
+router.get("/:userId", requireAuth, async (req, res) => {
   try {
     const messages = await Message.find({
       $or: [
         { sender: req.user.id, receiver: req.params.userId },
         { sender: req.params.userId, receiver: req.user.id },
       ],
-      hiddenFor: { $ne: req.user.id },  // exclude "deleted for me" messages
+      hiddenFor: { $ne: req.user.id },
     })
       .populate("sender", "username fullName")
       .populate("replyTo", "text sender")
@@ -119,7 +112,7 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 });
 
 // SEND message
-router.post("/", requireAuth, requireRole, async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const { receiverId, text, replyTo } = req.body;
     const receiverSocketId = getReceiverSocketId(receiverId);
@@ -151,7 +144,7 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
   }
 });
 
-// DELETE single message (soft delete for sender only)
+// DELETE single message for everyone (sender only)
 router.delete("/:messageId", requireAuth, async (req, res) => {
   try {
     const msg = await Message.findById(req.params.messageId);
@@ -162,7 +155,6 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
     msg.deleted = true;
     await msg.save();
 
-    // Notify receiver in real time
     const receiverSocketId = getReceiverSocketId(msg.receiver.toString());
     if (receiverSocketId) io.to(receiverSocketId).emit("message_deleted", { messageId: msg._id.toString() });
 
@@ -172,8 +164,8 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
   }
 });
 
-// CLEAR entire chat between two users
-router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) => {
+// CLEAR entire chat
+router.delete("/clear/:partnerId", requireAuth, async (req, res) => {
   try {
     await Message.deleteMany({
       $or: [
@@ -187,8 +179,7 @@ router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) =>
   }
 });
 
-
-// DELETE FOR ME only (hides from one side, using hiddenFor array)
+// DELETE FOR ME only
 router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
   try {
     const msg = await Message.findById(req.params.messageId);

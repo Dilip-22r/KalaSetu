@@ -21,6 +21,7 @@ io.on("connection", (socket) => {
   if (userId && userId !== "undefined") userSocketMap[userId] = socket.id;
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
+  // Mark messages as seen
   socket.on("mark_seen", async ({ viewerId, partnerId }) => {
     try {
       await Message.updateMany(
@@ -32,6 +33,17 @@ io.on("connection", (socket) => {
     } catch (err) {
       console.error("mark_seen error:", err.message);
     }
+  });
+
+  // Typing indicator
+  socket.on("typing", ({ to }) => {
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) io.to(receiverSocketId).emit("typing", { from: userId });
+  });
+
+  socket.on("stop_typing", ({ to }) => {
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) io.to(receiverSocketId).emit("stop_typing", { from: userId });
   });
 
   socket.on("disconnect", () => {

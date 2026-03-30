@@ -4,6 +4,8 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
   messages: [],
   selectedUserId: null,
+  isTyping: false,
+
   setSelectedUserId: (id) => set({ selectedUserId: id }),
   setMessages: (newMessages) => set({ messages: newMessages }),
 
@@ -19,7 +21,7 @@ export const useChatStore = create((set, get) => ({
     set({
       messages: get().messages.map((m) => {
         const senderId = String(m.sender?._id ?? m.sender ?? "");
-        return senderId !== String(partnerId) ? { ...m, status: "seen" } : m;
+        return senderId === String(partnerId) ? { ...m, status: "seen" } : m;
       }),
     });
   },
@@ -27,9 +29,19 @@ export const useChatStore = create((set, get) => ({
   markMessageDeleted: (messageId) => {
     set({
       messages: get().messages.map((m) =>
-        m._id === messageId ? { ...m, text: "This message was deleted", deleted: true } : m
+        m._id === messageId
+          ? { ...m, text: "This message was deleted", deleted: true }
+          : m
       ),
     });
+  },
+
+  addMessage: (msg) => {
+    set({ messages: [...get().messages, msg] });
+  },
+
+  removeMessageById: (msgId) => {
+    set({ messages: get().messages.filter((m) => m._id !== msgId) });
   },
 
   subscribeToMessages: () => {
@@ -38,12 +50,13 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("newMessage", (newMessage) => {
       const { selectedUserId } = get();
-      if (!selectedUserId || newMessage.sender._id !== selectedUserId) return;
-      set({ messages: [...get().messages, newMessage] });
-      const { socket: currentSocket } = useAuthStore.getState();
+      const senderId = newMessage.sender?._id ?? newMessage.sender;
+      if (!selectedUserId || String(senderId) !== String(selectedUserId)) return;
+      set({ messages: [...get().messages, newMessage], isTyping: false });
+      const { socket: s } = useAuthStore.getState();
       const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-      if (currentSocket?.connected && currentUser?._id) {
-        currentSocket.emit("mark_seen", { viewerId: currentUser._id, partnerId: newMessage.sender._id });
+      if (s?.connected && currentUser?._id) {
+        s.emit("mark_seen", { viewerId: currentUser._id, partnerId: senderId });
       }
     });
 
@@ -58,6 +71,16 @@ export const useChatStore = create((set, get) => ({
     socket.on("message_deleted", ({ messageId }) => {
       get().markMessageDeleted(messageId);
     });
+
+    socket.on("typing", ({ from }) => {
+      const { selectedUserId } = get();
+      if (String(from) === String(selectedUserId)) set({ isTyping: true });
+    });
+
+    socket.on("stop_typing", ({ from }) => {
+      const { selectedUserId } = get();
+      if (String(from) === String(selectedUserId)) set({ isTyping: false });
+    });
   },
 
   unsubscribeFromMessages: () => {
@@ -67,5 +90,7 @@ export const useChatStore = create((set, get) => ({
     socket.off("message_delivered");
     socket.off("message_seen");
     socket.off("message_deleted");
+    socket.off("typing");
+    socket.off("stop_typing");
   },
 }));

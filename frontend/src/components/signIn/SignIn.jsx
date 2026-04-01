@@ -3,6 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useAuthStore } from "../../store/useAuthStore";
 import artformsBg from "../../assets/artforms.png";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./SignIn.css";
 
 function SignIn() {
@@ -48,6 +49,7 @@ function SignIn() {
       <div className="si-overlay" />
 
       <nav className="si-nav">
+        <img src={kalasetuLogo} alt="KalaSetu" className="si-brand-logo" />
         <h1 className="si-brand" onClick={() => navigate("/")}>KalaSetu</h1>
         <button className="si-back" onClick={() => navigate("/")}>Back</button>
       </nav>
@@ -129,3 +131,4 @@ function SignIn() {
 }
 
 export default SignIn;
+

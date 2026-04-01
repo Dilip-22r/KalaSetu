@@ -369,3 +369,15 @@
   .l-stats { flex-direction: column; gap: 20px; }
   .l-cta-banner { margin: 16px; border-radius: 16px; }
 }
+.l-brand-logo { height: 48px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2)); }
+
+.l-brand-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 50%; }
+
+.l-brand-text {
+  font-size: 26px;
+  font-weight: 900;
+  font-family: "Playfair Display", serif;
+  color: #6c9a9e;
+  letter-spacing: 1px;
+  cursor: pointer;
+}

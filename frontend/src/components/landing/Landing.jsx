@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./Landing.css";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
 
 const artSymbols = ["🎨","🪘","🎭","🌸","🏺","🪁","🧵","🪗","🎋","🌺","🎐","🧿","🪔","🥁","🎻","💫"];
 
@@ -105,8 +106,8 @@ function Landing() {
       {/* Navbar */}
       <nav className="l-nav">
         <div className="l-brand">
-          <span className="l-brand-icon">🌸</span>
-          <span className="l-brand-name">KalaSetu</span>
+          <img src={kalasetuLogo} alt="KalaSetu" className="l-brand-logo" />
+          <span className="l-brand-text">KalaSetu</span>
         </div>
         <div className="l-nav-links">
           <button className="l-nav-ghost" onClick={() => document.getElementById("about").scrollIntoView({ behavior: "smooth" })}>

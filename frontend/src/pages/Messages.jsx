@@ -4,6 +4,7 @@ import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import "./Messages.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -43,7 +44,12 @@ function Messages() {
   if (!user || user.role === "user") {
     return (
       <div className="msg-bg">
-        <nav className="msg-navbar"><h1 onClick={() => navigate(user ? "/home" : "/")}>KalaSetu</h1></nav>
+        <nav className="msg-navbar">
+          <div className="msg-brand">
+            <img src={kalasetuLogo} alt="KalaSetu" className="msg-logo" />
+            <h1 onClick={() => navigate(user ? "/home" : "/")}>KalaSetu</h1>
+          </div>
+        </nav>
         <div className="msg-locked">
           <span>💬</span>
           <h2>Messaging is for Artisans &amp; NGOs</h2>
@@ -263,7 +269,10 @@ function Messages() {
       )}
 
       <nav className="msg-navbar">
-        <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        <div className="msg-brand">
+          <img src={kalasetuLogo} alt="KalaSetu" className="msg-logo" />
+          <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        </div>
         <div className="msg-nav-btns">
           <button onClick={() => navigate("/home")}>← Dashboard</button>
         </div>

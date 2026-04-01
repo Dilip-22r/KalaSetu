@@ -12,7 +12,12 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   position: sticky; top: 0; z-index: 100;
 }
-.brand-title { font-size: 24px; font-weight: 700; color: #fff; cursor: pointer; letter-spacing: 1px; }
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 10px; 
+}
+.brand-title { margin: 0; line-height: 1;font-size: 24px; font-weight: 700; color: #fff; cursor: pointer; letter-spacing: 1px; }
 .nav-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .nav-buttons button {
   padding: 7px 16px; border-radius: 20px; border: none;
@@ -401,3 +406,7 @@
   color: #888;
   font-size: 0.8rem;
 }
+
+.home-brand-logo { height: 48px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2)); }
+
+.home-brand-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 50%; }

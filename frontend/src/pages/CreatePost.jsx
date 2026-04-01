@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./CreatePost.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -54,7 +55,10 @@ function CreatePost() {
   return (
     <div className="cp-bg">
       <nav className="cp-navbar">
-        <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        <div className="cp-brand">
+          <img src={kalasetuLogo} alt="Kalasetu Logo" className="cp-logo" />
+          <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        </div>
         <button onClick={() => navigate("/home")}>← Back</button>
       </nav>
 

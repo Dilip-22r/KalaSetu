@@ -5,7 +5,9 @@
   padding: 16px 50px; display: flex; justify-content: space-between; align-items: center;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12); position: sticky; top: 0; z-index: 100;
 }
-.prof-navbar h1 { color: #fff; font-size: 24px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
+.prof-brand { display: flex; align-items: center; gap: 12px; }
+.prof-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 50%; }
+.prof-navbar h1 {margin: 0; line-height: 1.0; color: #fff; font-size: 24px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
 .prof-nav-btns { display: flex; gap: 10px; }
 .prof-nav-btns button {
   padding: 7px 16px; border-radius: 20px; border: none; font-size: 13px;

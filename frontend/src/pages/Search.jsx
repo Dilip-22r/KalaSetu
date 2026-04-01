@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Search.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -52,7 +53,10 @@ function Search() {
   return (
     <div className="search-bg">
       <nav className="s-navbar">
-        <h1 onClick={() => navigate(user ? "/home" : "/")}>KalaSetu</h1>
+        <div className="brand-section">
+          <img src={kalasetuLogo} alt="KalaSetu" className="home-brand-logo" />
+          <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
+        </div>
         <div className="s-nav-btns">
           {user ? (
             <button onClick={() => navigate("/home")}>← Dashboard</button>

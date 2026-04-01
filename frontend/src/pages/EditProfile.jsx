@@ -7,6 +7,7 @@ import "react-easy-crop/react-easy-crop.css";
 import getCroppedImg from "../utils/cropImage";
 import { useAuthStore } from "../store/useAuthStore";
 import "./EditProfile.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -176,9 +177,12 @@ function EditProfile() {
 
       {/* Navbar */}
       <nav className="navbar">
-        <h1 className="brand-title" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>
-          KalaSetu
-        </h1>
+        <div className="brand-section">
+          <img src={kalasetuLogo} alt="KalaSetu" className="home-brand-logo" />
+          <h1 className="brand-title" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>
+            KalaSetu
+          </h1>
+        </div>
         <div className="nav-buttons">
           <button onClick={() => navigate(`/profile/${currentUser._id}`)}>← Back</button>
           <button onClick={() => setShowLogoutModal(true)}>Logout</button>

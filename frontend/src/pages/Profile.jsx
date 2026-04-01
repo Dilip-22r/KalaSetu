@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import "./Profile.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -104,7 +105,10 @@ function Profile() {
 
   const renderNavbar = () => (
     <nav className="prof-navbar">
-      <h1 onClick={() => navigate(currentUser ? "/home" : "/")}>KalaSetu</h1>
+      <div className="prof-brand">
+        <img src={kalasetuLogo} alt="KalaSetu" className="prof-logo" />
+        <h1 onClick={() => navigate(currentUser ? "/home" : "/")}>KalaSetu</h1>
+      </div>
       <div className="prof-nav-btns">
         <button onClick={() => navigate(currentUser ? "/home" : "/")}>← Dashboard</button>
         {isOwn && (

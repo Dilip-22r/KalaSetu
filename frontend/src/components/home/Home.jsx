@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./Home.css";
 import { useNotificationStore } from "../../store/useNotificationStore";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -176,7 +177,10 @@ function Home() {
   return (
     <div className="home-bg">
       <nav className="navbar">
-        <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
+        <div className="brand-section">
+          <img src={kalasetuLogo} alt="KalaSetu" className="home-brand-logo" />
+          <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
+        </div>
         <div className="nav-buttons">
           <div className="notification-wrapper" ref={dropdownRef}>
             <button className="bell-btn" onClick={handleBellClick}>

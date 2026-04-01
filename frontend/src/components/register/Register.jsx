@@ -4,6 +4,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import "./Register.css";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -81,7 +82,10 @@ function Register() {
   return (
     <div className="theme-bg">
       <nav className="navbar">
-        <h1 className="brand-title">KalaSetu</h1>
+        <div className="brand-section">
+          <img src={kalasetuLogo} alt="KalaSetu" className="home-brand-logo" />
+          <h1 className="brand-title">KalaSetu</h1>
+        </div>
         <div className="nav-buttons">
           <button onClick={() => navigate("/home")}>Back</button>
           <button onClick={() => setShowLogoutModal(true)}>Logout</button>

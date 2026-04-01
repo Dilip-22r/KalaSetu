@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./CreatePost.css";
+import kalasetuLogo from "../assets/kalasetu_logo.png";
 
 const API = "http://localhost:5000";
 
@@ -62,7 +63,12 @@ function EditPost() {
 
   if (fetching) return (
     <div className="cp-bg">
-      <nav className="cp-navbar"><h1>KalaSetu</h1></nav>
+      <nav className="cp-navbar">
+        <div className="cp-brand">
+          <img src={kalasetuLogo} alt="KalaSetu" className="cp-logo" />
+          <h1>KalaSetu</h1>
+        </div>
+      </nav>
       <div style={{ textAlign: "center", padding: "80px", color: "#aaa" }}>Loading post...</div>
     </div>
   );
@@ -70,7 +76,10 @@ function EditPost() {
   return (
     <div className="cp-bg">
       <nav className="cp-navbar">
-        <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        <div className="cp-brand">
+          <img src={kalasetuLogo} alt="KalaSetu" className="cp-logo" />
+          <h1 onClick={() => navigate("/home")}>KalaSetu</h1>
+        </div>
         <button onClick={() => navigate(-1)}>← Back</button>
       </nav>
 

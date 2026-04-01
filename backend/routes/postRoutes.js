@@ -2,6 +2,8 @@ import express from "express";
 import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
 import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
+import { Notification } from "../models/Notification.js";
+import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
@@ -35,6 +37,17 @@ router.get("/:id", async (req, res) => {
     const post = await Post.findById(req.params.id).populate("author", "username fullName role");
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET post likers
+router.get("/:id/likes", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate("likes", "username fullName profilePic");
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.likes);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -81,9 +94,48 @@ router.put("/:id/like", requireAuth, async (req, res) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
     const idx = post.likes.indexOf(req.user.id);
-    if (idx === -1) post.likes.push(req.user.id);
-    else post.likes.splice(idx, 1);
-    await post.save();
+    
+    if (idx === -1) {
+      post.likes.push(req.user.id);
+      await post.save();
+
+      // Send Notification
+      if (post.author.toString() !== req.user.id) {
+        const existing = await Notification.findOne({
+          recipient: post.author,
+          sender: req.user.id,
+          type: "like",
+          post: post._id,
+        });
+
+        if (!existing) {
+          const newNotif = new Notification({
+            recipient: post.author,
+            sender: req.user.id,
+            type: "like",
+            post: post._id,
+          });
+          await newNotif.save();
+          const populated = await newNotif.populate("sender", "username fullName profilePic");
+          const receiverSocketId = getReceiverSocketId(post.author.toString());
+          if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populated);
+        }
+      }
+    } else {
+      post.likes.splice(idx, 1);
+      await post.save();
+
+      // Remove Notification on unlike
+      if (post.author.toString() !== req.user.id) {
+        await Notification.deleteOne({
+          recipient: post.author,
+          sender: req.user.id,
+          type: "like",
+          post: post._id,
+        });
+      }
+    }
+
     res.json({ likes: post.likes.length });
   } catch (err) {
     res.status(500).json({ message: err.message });

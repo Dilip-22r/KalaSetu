@@ -22,6 +22,10 @@ function Profile() {
   const [moreModal, setMoreModal] = useState(null); // null | 'report' | 'block'
   const [moreToast, setMoreToast] = useState("");
 
+  const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likers, setLikers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
+
   const isOwn = currentUser && currentUser._id === userId;
 
   useEffect(() => {
@@ -85,6 +89,17 @@ function Profile() {
     setMoreModal(null);
     setMoreToast(msg);
     setTimeout(() => setMoreToast(""), 3000);
+  };
+
+  const handleLikesClick = async (postId, likesCount) => {
+    if (likesCount === 0) return;
+    setLikesModalPostId(postId);
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/likes`);
+      setLikers(res.data);
+    } catch (err) { }
+    setLoadingLikes(false);
   };
 
   const renderNavbar = () => (
@@ -334,7 +349,12 @@ function Profile() {
                           })}
                         </span>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <span className="prof-post-likes">❤️ {post.likes?.length || 0}</span>
+                          <span 
+                            className="prof-post-likes prof-likes-count" 
+                            onClick={(e) => { e.stopPropagation(); handleLikesClick(post._id, post.likes?.length || 0); }}
+                          >
+                            ❤️ {post.likes?.length || 0}
+                          </span>
                           {isOwn && (
                             <div style={{ display: "flex", gap: "8px" }}>
                               <button 
@@ -405,6 +425,34 @@ function Profile() {
           </div>
         </div>
       )}
+
+      {/* Likes Modal */}
+      {likesModalPostId && (
+        <div className="prof-logout-overlay" onClick={() => setLikesModalPostId(null)}>
+          <div className="prof-more-modal prof-likes-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prof-likes-header">
+              <h3 style={{margin:0, fontSize:'18px'}}>Likes</h3>
+              <button onClick={() => setLikesModalPostId(null)}>✕</button>
+            </div>
+            <div className="prof-likes-body">
+              {loadingLikes ? <div className="prof-spinner" style={{margin:'20px auto'}}></div> : (
+                <div className="prof-likers-list">
+                  {likers.map(u => (
+                     <div key={u._id} className="prof-liker-item" onClick={() => { setLikesModalPostId(null); navigate(`/profile/${u._id}`); }}>
+                        <div className="prof-liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
+                        <div className="prof-liker-info">
+                          <span className="prof-liker-username">{u.username}</span>
+                          <span className="prof-liker-name">{u.fullName}</span>
+                        </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

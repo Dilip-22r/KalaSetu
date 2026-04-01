@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./Home.css";
+import { useNotificationStore } from "../../store/useNotificationStore";
 
 const API = "http://localhost:5000";
 
-function PostCard({ post, currentUser, onLike, onDelete }) {
+function PostCard({ post, currentUser, onLike, onDelete, onShowLikes }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const isOwner = post.author?._id === currentUser?._id;
@@ -47,7 +48,7 @@ function PostCard({ post, currentUser, onLike, onDelete }) {
               onClick={() => onLike(post._id)}
               disabled={!currentUser}
             >
-              {liked ? "❤️" : "🤍"} {post.likes?.length || 0}
+              {liked ? "❤️" : "🤍"} <span onClick={(e) => { e.stopPropagation(); onShowLikes(post._id, post.likes?.length || 0); }} className="likes-count">{post.likes?.length || 0}</span>
             </button>
           </div>
         </div>
@@ -64,11 +65,55 @@ function Home() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
 
+  const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likers, setLikers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
+
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { notifications, unreadCount, fetchNotifications, markAsRead, subscribeToNotifications, unsubscribeFromNotifications, hasMore, page } = useNotificationStore();
+  const dropdownRef = useRef(null);
+
+  const handleLikesClick = async (postId, likesCount) => {
+    if (likesCount === 0) return;
+    setLikesModalPostId(postId);
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/likes`);
+      setLikers(res.data);
+    } catch (err) { }
+    setLoadingLikes(false);
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (!stored) { navigate("/signin"); return; }
     setUser(JSON.parse(stored));
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications(1);
+      subscribeToNotifications();
+      return () => unsubscribeFromNotifications();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleBellClick = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      markAsRead();
+    }
+  };
 
   useEffect(() => { fetchPosts(); }, [search, category]);
 
@@ -133,6 +178,46 @@ function Home() {
       <nav className="navbar">
         <h1 className="brand-title" onClick={() => navigate("/home")}>KalaSetu</h1>
         <div className="nav-buttons">
+          <div className="notification-wrapper" ref={dropdownRef}>
+            <button className="bell-btn" onClick={handleBellClick}>
+              🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
+            </button>
+            {showNotifications && (
+              <div className="notification-dropdown">
+                <h4>Notifications</h4>
+                {notifications.length === 0 ? (
+                  <p className="no-notif">No new notifications</p>
+                ) : (
+                  <div className="notif-list">
+                    {notifications.map(n => (
+                      <div 
+                        key={n._id} 
+                        className={`notif-card ${!n.read ? "unread" : ""}`}
+                        onClick={() => {
+                          if (n.type === 'message') {
+                            navigate(`/messages/${n.sender?._id}`);
+                            setShowNotifications(false);
+                          }
+                        }}
+                        style={{ cursor: n.type === 'message' ? 'pointer' : 'default' }}
+                      >
+                        <div className="notif-avatar">{n.sender?.username?.[0]?.toUpperCase()}</div>
+                        <div className="notif-content">
+                          <p><strong>{n.sender?.username}</strong> {n.type === 'like' ? 'liked your post' : 'sent you a message'}</p>
+                          <small>{new Date(n.createdAt).toLocaleDateString()}</small>
+                        </div>
+                      </div>
+                    ))}
+                    {hasMore && (
+                       <button className="load-more-btn" onClick={() => fetchNotifications(page + 1)}>
+                         Load More
+                       </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <button onClick={() => navigate("/search")}>🔍 Explore</button>
           {user.role !== "user" && (
             <>
@@ -190,11 +275,37 @@ function Home() {
         ) : (
           <div className="posts-grid">
             {posts.map((post) => (
-              <PostCard key={post._id} post={post} currentUser={user} onLike={handleLike} onDelete={handleDelete} />
+              <PostCard key={post._id} post={post} currentUser={user} onLike={handleLike} onDelete={handleDelete} onShowLikes={handleLikesClick} />
             ))}
           </div>
         )}
       </div>
+
+      {likesModalPostId && (
+        <div className="likes-modal-overlay" onClick={() => setLikesModalPostId(null)}>
+          <div className="likes-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="likes-modal-header">
+              <h3>Likes</h3>
+              <button className="close-modal-btn" onClick={() => setLikesModalPostId(null)}>✕</button>
+            </div>
+            <div className="likes-modal-body">
+              {loadingLikes ? <div className="spinner"></div> : (
+                <div className="likers-list">
+                  {likers.map(u => (
+                     <div key={u._id} className="liker-item" onClick={() => { setLikesModalPostId(null); navigate(`/profile/${u._id}`); }}>
+                        <div className="liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
+                        <div className="liker-info">
+                          <span className="liker-username">{u.username}</span>
+                          <span className="liker-fullname">{u.fullName}</span>
+                        </div>
+                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

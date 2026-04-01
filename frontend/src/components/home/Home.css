@@ -155,3 +155,249 @@
   transition: 0.2s;
 }
 .edit-btn:hover { background: rgba(108,154,158,0.1); border-color: #6c9a9e; }
+
+/* NOTIFICATIONS CSS */
+.notification-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.bell-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  position: relative;
+  padding: 5px;
+}
+
+.bell-btn:hover {
+  background: transparent;
+  transform: scale(1.1);
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #d18364;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 5px;
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  margin-top: 12px;
+  z-index: 1000;
+  border: 1px solid #e0d4c8;
+  overflow: hidden;
+  text-align: left;
+}
+
+.notification-dropdown h4 {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0d4c8;
+  background: #f9f6f2;
+  color: #333;
+}
+
+.no-notif {
+  padding: 16px;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.notif-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.notif-card {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0ebe4;
+  gap: 12px;
+  transition: background 0.2s;
+  cursor: default;
+}
+
+.notif-card:hover {
+  background: #fdfdfd;
+}
+
+.notif-card.unread {
+  background: rgba(108,154,158,0.08);
+}
+
+.notif-avatar {
+  background: linear-gradient(135deg, #6c9a9e, #8fb8b3);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.notif-content p {
+  margin: 0 0 4px 0;
+  font-size: 0.85rem;
+  color: #333;
+  line-height: 1.3;
+}
+
+.notif-content small {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.load-more-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: #f9f6f2;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.load-more-btn:hover {
+  background: #e0d4c8;
+}
+
+/* LIKES MODAL CSS */
+.likes-count {
+  cursor: pointer;
+  padding-left: 4px;
+}
+
+.likes-count:hover {
+  text-decoration: underline;
+}
+
+.likes-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px);
+}
+
+.likes-modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.2s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.likes-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0ebe4;
+  background: #fdfdfd;
+}
+
+.likes-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+}
+
+.close-modal-btn:hover {
+  color: #333;
+}
+
+.likes-modal-body {
+  padding: 10px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.likers-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.liker-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.liker-item:hover {
+  background: #fdfdfd;
+}
+
+.liker-avatar {
+  background: linear-gradient(135deg, #d18364, #e8a58a);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.liker-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.liker-username {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.liker-fullname {
+  color: #888;
+  font-size: 0.8rem;
+}

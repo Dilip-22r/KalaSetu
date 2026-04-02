@@ -317,7 +317,7 @@ function Messages() {
         <div className="msg-modal-overlay">
           <div className="msg-modal">
             <h3>Clear Chat</h3>
-            <p>This will permanently delete all messages in this conversation for both sides. Are you sure?</p>
+            <p>This will clear all messages in this conversation for you only. The other person will still see the chat. Are you sure?</p>
             <div className="msg-modal-btns">
               <button className="msg-modal-cancel" onClick={() => setShowClearConfirm(false)}>
                 Cancel

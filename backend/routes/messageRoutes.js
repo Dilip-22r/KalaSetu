@@ -25,6 +25,7 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
         $match: {
           $or: [{ sender: userIdObj }, { receiver: userIdObj }],
           deleted: { $ne: true },
+          hiddenFor: { $ne: userIdObj }, // exclude messages hidden for this user (cleared chats)
         },
       },
       { $sort: { createdAt: -1 } },
@@ -185,16 +186,25 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
   }
 });
 
-// CLEAR entire chat between two users
+// CLEAR chat for current user only (WhatsApp-style: only hides for the requester)
 router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) => {
   try {
-    await Message.deleteMany({
-      $or: [
-        { sender: req.user.id, receiver: req.params.partnerId },
-        { sender: req.params.partnerId, receiver: req.user.id },
-      ],
-    });
-    res.json({ message: "Chat cleared" });
+    const userId = req.user.id;
+    const partnerId = req.params.partnerId;
+
+    // Add current user's ID to hiddenFor on every message in this conversation
+    await Message.updateMany(
+      {
+        $or: [
+          { sender: userId, receiver: partnerId },
+          { sender: partnerId, receiver: userId },
+        ],
+        hiddenFor: { $ne: userId }, // skip messages already hidden for this user
+      },
+      { $push: { hiddenFor: userId } }
+    );
+
+    res.json({ message: "Chat cleared for you" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

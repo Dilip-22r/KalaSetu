@@ -5,10 +5,9 @@ import jwt from "jsonwebtoken";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import { Notification } from "../models/Notification.js";
+import { Post } from "../models/Post.js";
 
 const router = express.Router();
-
-
 
 // GET conversations
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
@@ -25,6 +24,7 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
         $match: {
           $or: [{ sender: userIdObj }, { receiver: userIdObj }],
           deleted: { $ne: true },
+          hiddenFor: { $ne: userIdObj }, // exclude messages hidden for this user (cleared chats)
         },
       },
       { $sort: { createdAt: -1 } },
@@ -103,6 +103,12 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
     })
       .populate("sender", "username fullName")
       .populate("replyTo", "text sender")
+      .populate({
+        path: "sharedPost",
+        populate: [
+          { path: "author", select: "username fullName photo" }
+        ]
+      })
       .sort({ createdAt: 1 });
 
     await Message.updateMany(
@@ -122,7 +128,7 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 // SEND message
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {
-    const { receiverId, text, replyTo } = req.body;
+    const { receiverId, text, replyTo, sharedPostId, image } = req.body;
     const receiverSocketId = getReceiverSocketId(receiverId);
     const initialStatus = receiverSocketId ? "delivered" : "sent";
 
@@ -132,11 +138,19 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
       text,
       status: initialStatus,
       replyTo: replyTo || null,
+      sharedPost: sharedPostId || null,
+      image: image || "",
     });
     await msg.save();
     const populated = await msg.populate([
       { path: "sender", select: "username fullName" },
       { path: "replyTo", select: "text sender" },
+      { 
+        path: "sharedPost", 
+        populate: [
+          { path: "author", select: "username fullName photo" }
+        ]
+      },
     ]);
 
     if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populated);
@@ -185,16 +199,25 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
   }
 });
 
-// CLEAR entire chat between two users
+// CLEAR chat for current user only (WhatsApp-style: only hides for the requester)
 router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) => {
   try {
-    await Message.deleteMany({
-      $or: [
-        { sender: req.user.id, receiver: req.params.partnerId },
-        { sender: req.params.partnerId, receiver: req.user.id },
-      ],
-    });
-    res.json({ message: "Chat cleared" });
+    const userId = req.user.id;
+    const partnerId = req.params.partnerId;
+
+    // Add current user's ID to hiddenFor on every message in this conversation
+    await Message.updateMany(
+      {
+        $or: [
+          { sender: userId, receiver: partnerId },
+          { sender: partnerId, receiver: userId },
+        ],
+        hiddenFor: { $ne: userId }, // skip messages already hidden for this user
+      },
+      { $push: { hiddenFor: userId } }
+    );
+
+    res.json({ message: "Chat cleared for you" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -7,8 +7,6 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
-
-
 // GET all posts (public) with optional search
 router.get("/", optionalAuth, async (req, res) => {
   try {
@@ -137,6 +135,62 @@ router.put("/:id/like", requireAuth, async (req, res) => {
     }
 
     res.json({ likes: post.likes.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// DISLIKE/UNDISLIKE post
+router.put("/:id/dislike", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    const idx = post.dislikes.indexOf(req.user.id);
+    if (idx === -1) post.dislikes.push(req.user.id);
+    else post.dislikes.splice(idx, 1);
+    await post.save();
+    res.json({ dislikes: post.dislikes.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// REPOST/UNREPOST post
+router.put("/:id/repost", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    const idx = post.reposts.indexOf(req.user.id);
+    if (idx === -1) post.reposts.push(req.user.id);
+    else post.reposts.splice(idx, 1);
+    await post.save();
+    res.json({ reposts: post.reposts.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ADD comment
+router.post("/:id/comments", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    const comment = { author: req.user.id, text: req.body.text };
+    post.comments.push(comment);
+    await post.save();
+    await post.populate("comments.author", "username fullName role");
+    res.json(post.comments[post.comments.length - 1]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET comments
+router.get("/:id/comments", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate("comments.author", "username fullName role");
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.comments);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

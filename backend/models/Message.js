@@ -9,6 +9,8 @@ const messageSchema = new mongoose.Schema(
     deleted:  { type: Boolean, default: false },   // deleted for everyone
     hiddenFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // deleted for me
     replyTo:  { type: mongoose.Schema.Types.ObjectId, ref: "Message", default: null },
+    sharedPost: { type: mongoose.Schema.Types.ObjectId, ref: "Post", default: null },
+    image:    { type: String, default: "" }, // direct media sharing
   },
   { timestamps: true }
 );

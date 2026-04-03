@@ -11,6 +11,8 @@ import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import CreatePost from "./pages/CreatePost";
 import EditPost from "./pages/EditPost";
+import "./App.css";
+import "./index.css";
 
 function App() {
   return (

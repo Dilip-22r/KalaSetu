@@ -36,6 +36,7 @@ function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes 
   const [submitting, setSubmitting] = useState(false);
   const [showRepostMenu, setShowRepostMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [showFullPost, setShowFullPost] = useState(false);
   const [shareUsers, setShareUsers] = useState([]);
   const [shareSearch, setShareSearch] = useState("");
@@ -192,10 +193,29 @@ function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes 
             )}
           </div>
 
-          {/* Share — LinkedIn-style send modal */}
-          <button className="post-action-btn share" onClick={handleOpenShare} disabled={!currentUser} title="Send">
-            <i className="fi fi-sr-paper-plane-top" />
-          </button>
+          {/* Share — LinkedIn-style dropdown */}
+          <div className="post-action-wrap">
+            <button className="post-action-btn share" onClick={() => currentUser && setShowShareMenu(v => !v)} disabled={!currentUser} title="Share">
+              <i className="fi fi-sr-share" />
+            </button>
+            {showShareMenu && (
+              <div className="post-repost-menu">
+                <button onClick={(e) => { e.stopPropagation(); setShowShareMenu(false); handleOpenShare(); }}>
+                  <i className="fi fi-sr-paper-plane-top" />
+                  Send in a message
+                </button>
+                <button onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(`${window.location.origin}/post/${post._id}`);
+                  setShowShareMenu(false);
+                  alert("Link copied to clipboard!");
+                }}>
+                  <i className="fi fi-sr-link" />
+                  Copy link
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Comments panel */}
@@ -540,6 +560,32 @@ function Home() {
             </div>
           )}
         </div>
+
+        {/* ─── RIGHT SIDEBAR ────────────────────────────────── */}
+        <aside className="home-right-sidebar">
+          <div className="info-card">
+            <h3>About KalaSetu</h3>
+            <p>Empowering traditional artisans by bridging the gap between centuries-old craftsmanship and modern digital platforms.</p>
+          </div>
+          
+          <div className="info-card">
+            <h3>Why Join Us?</h3>
+            <ul>
+              <li><i className="fi fi-sr-globe" /> Connect globally</li>
+              <li><i className="fi fi-sr-shop" /> Sell authentically</li>
+              <li><i className="fi fi-sr-hands-heart" /> Support NGOs</li>
+            </ul>
+          </div>
+          
+          <div className="info-card">
+            <h3>Platform Stats</h3>
+            <ul>
+              <li><i className="fi fi-sr-users" /> 1K+ Artisans</li>
+              <li><i className="fi fi-sr-calendar-star" /> 500+ Events</li>
+              <li><i className="fi fi-sr-heart" /> 100% Non-profit</li>
+            </ul>
+          </div>
+        </aside>
       </div>
 
       {/* ─── Likes Modal ──────────────────────────────────── */}

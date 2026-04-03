@@ -18,6 +18,7 @@ function CreatePost() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     title: "",
     content: "",
@@ -44,15 +45,16 @@ function CreatePost() {
 
   const handleChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
 
+  const handleNext = () => {
+    if (!form.title.trim()) { setError("Title is required."); return; }
+    setError("");
+    setStep(2);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
-
-    if (!form.title.trim() || !form.content.trim()) {
-      setError("Title and content are required.");
-      return;
-    }
-
+    if (!form.content.trim()) { setError("Content is required."); return; }
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -60,9 +62,7 @@ function CreatePost() {
       await axios.post(
         `${API}/posts`,
         { ...form, tags },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       navigate("/home");
     } catch (err) {
@@ -82,76 +82,94 @@ function CreatePost() {
 
           {error && <div className="cp-error">{error}</div>}
 
-          <form onSubmit={handleSubmit} className="cp-form">
-            <div className="cp-field">
-              <label>Title *</label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Give your post a compelling title"
-              />
-            </div>
-
-            <div className="cp-field">
-              <label>Category</label>
-              <select name="category" value={form.category} onChange={handleChange}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="cp-field">
-              <label>Content *</label>
-              <textarea
-                name="content"
-                value={form.content}
-                onChange={handleChange}
-                placeholder="Tell your story, describe your artwork, or share event details."
-                rows={8}
-              />
-            </div>
-
-            <div className="cp-field">
-              <label>
-                Tags <span className="cp-hint">(comma-separated)</span>
-              </label>
-              <input
-                type="text"
-                name="tags"
-                value={form.tags}
-                onChange={handleChange}
-                placeholder="e.g. handloom, folk art, Rajasthan"
-              />
-            </div>
-
-            <div className="cp-field">
-              <label>
-                Image URL <span className="cp-hint">(optional)</span>
-              </label>
-              <input
-                type="url"
-                name="image"
-                value={form.image}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-
-            {form.image && (
-              <div className="cp-preview">
-                <img src={form.image} alt="Preview" onError={(event) => { event.target.style.display = "none"; }} />
+          {step === 1 && (
+            <div className="cp-form">
+              <div className="cp-field">
+                <label>Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  placeholder="Give your post a compelling title"
+                />
               </div>
-            )}
+              <div className="cp-row">
+                <div className="cp-field">
+                  <label>Category</label>
+                  <select name="category" value={form.category} onChange={handleChange}>
+                    {categoryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="cp-field">
+                  <label>Tags <span className="cp-hint">(comma-separated)</span></label>
+                  <input
+                    type="text"
+                    name="tags"
+                    value={form.tags}
+                    onChange={handleChange}
+                    placeholder="e.g. handloom, folk art, Rajasthan"
+                  />
+                </div>
+              </div>
+              <button type="button" className="cp-submit" onClick={handleNext}>
+                Next → Content
+              </button>
+            </div>
+          )}
 
-            <button type="submit" className="cp-submit" disabled={loading}>
-              {loading ? "Publishing..." : "Publish Post"}
-            </button>
-          </form>
+          {step === 2 && (
+            <form onSubmit={handleSubmit} className="cp-form">
+              <div className="cp-field">
+                <label>Content *</label>
+                <textarea
+                  name="content"
+                  value={form.content}
+                  onChange={handleChange}
+                  placeholder="Tell your story, describe your artwork, or share event details."
+                  rows={7}
+                />
+              </div>
+              <div className="cp-field">
+                <label>Image <span className="cp-hint">(optional)</span></label>
+                <div className="cp-image-upload">
+                  {form.image && (
+                    <div className="cp-preview">
+                      <img src={form.image} alt="Preview" />
+                      <button type="button" className="cp-remove-img" onClick={() => setForm({ ...form, image: "" })}>✕ Remove</button>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="postImageUpload"
+                    className="cp-file-input"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      e.target.value = null;
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setForm((prev) => ({ ...prev, image: reader.result }));
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <label htmlFor="postImageUpload" className="cp-upload-label">
+                    <i className="fi fi-sr-picture" /> Browse from device
+                  </label>
+                </div>
+              </div>
+              <div className="cp-form-actions">
+                <button type="button" className="cp-back" onClick={() => { setError(""); setStep(1); }}>
+                  ← Back
+                </button>
+                <button type="submit" className="cp-submit" disabled={loading}>
+                  {loading ? "Publishing..." : "Publish Post"}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

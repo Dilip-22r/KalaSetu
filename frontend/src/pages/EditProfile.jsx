@@ -164,39 +164,6 @@ function EditProfile() {
       <Navbar />
 
       <div className="ep-shell">
-        <aside className="ep-intro">
-          <span className="ep-kicker">Shape your identity</span>
-          <h2 className="display-serif">Edit the profile people see before they decide to connect with you.</h2>
-          <p>
-            A strong profile helps collaborators understand what you do, where you are based, and
-            why your cultural work matters.
-          </p>
-
-          <div className="ep-intro-list">
-            <div className="ep-intro-item">
-              <span><i className="fi fi-sr-circle-user" /></span>
-              <div>
-                <strong>Use a clear display name</strong>
-                <small>Keep your profile immediately recognisable to artisans, NGOs, and organisers.</small>
-              </div>
-            </div>
-            <div className="ep-intro-item">
-              <span><i className="fi fi-sr-palette" /></span>
-              <div>
-                <strong>Highlight your craft</strong>
-                <small>List art forms, focus areas, and skills in language people can search for.</small>
-              </div>
-            </div>
-            <div className="ep-intro-item">
-              <span><i className="fi fi-sr-comments" /></span>
-              <div>
-                <strong>Make collaboration easier</strong>
-                <small>Write a short story that helps the right people know how to reach out.</small>
-              </div>
-            </div>
-          </div>
-        </aside>
-
         <div className="ep-card">
           <h2 className="theme-title">Edit Your Profile</h2>
           <p className="subtitle">Update your cultural journey or upload a fresh photo</p>

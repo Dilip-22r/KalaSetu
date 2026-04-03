@@ -20,7 +20,9 @@ function Navbar() {
   const page = useNotificationStore((state) => state.page);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const dropdownRef = useRef(null);
+  const profileRef = useRef(null);
   const initializedUserIdRef = useRef(null);
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const effectiveUser = authUser ?? storedUser;
@@ -55,6 +57,9 @@ function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -85,7 +90,6 @@ function Navbar() {
         <div className="g-brand" onClick={() => navigate("/")}>
           <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
           <div className="g-brand-copy">
-            <span className="g-brand-kicker">Cultural network</span>
             <h1 className="display-serif">KalaSetu</h1>
           </div>
         </div>
@@ -107,7 +111,6 @@ function Navbar() {
       <div className="g-brand" onClick={() => navigate("/home")}>
         <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
         <div className="g-brand-copy">
-          <span className="g-brand-kicker">Cultural network</span>
           <h1 className="display-serif">KalaSetu</h1>
         </div>
       </div>
@@ -191,36 +194,28 @@ function Navbar() {
             )}
           </div>
 
-          {effectiveUser.role === "user" ? (
-            <button className="g-primary-btn" onClick={() => navigate("/register")}>
-              <i className="fi fi-sr-sparkles" />
-              Become an Artisan
-            </button>
-          ) : (
+          <div className="g-profile-wrapper" ref={profileRef}>
             <button
-              className={`g-primary-btn ${isActivePath("/create-post") ? "is-active" : ""}`}
-              onClick={() => navigate("/create-post")}
+              className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
+              onClick={() => setShowProfileMenu((v) => !v)}
             >
-              <i className="fi fi-sr-sparkles" />
-              Create Post
+              <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+              <span className="g-profile-copy">
+                <strong>{effectiveUser.username}</strong>
+              </span>
             </button>
-          )}
-
-          <button
-            className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
-            onClick={() => navigate(`/profile/${effectiveUser._id}`)}
-          >
-            <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
-            <span className="g-profile-copy">
-              <strong>{effectiveUser.username}</strong>
-              <small>{effectiveUser.role === "ngo" ? "NGO" : effectiveUser.role === "artisan" ? "Artisan" : "Member"}</small>
-            </span>
-          </button>
-
-          <button className="g-ghost-btn" onClick={handleLogout}>
-            <i className="fi fi-sr-sign-out-alt" />
-            Logout
-          </button>
+            {showProfileMenu && (
+              <div className="g-profile-dropdown">
+                <div className="g-profile-menu-item" onClick={() => { navigate(`/profile/${effectiveUser._id}`); setShowProfileMenu(false); }}>
+                  <i className="fi fi-sr-user" /> View Profile
+                </div>
+                <div className="g-profile-menu-divider" />
+                <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogout}>
+                  <i className="fi fi-sr-sign-out-alt" /> Logout
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>

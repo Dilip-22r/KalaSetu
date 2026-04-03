@@ -8,8 +8,6 @@ import { Notification } from "../models/Notification.js";
 
 const router = express.Router();
 
-
-
 // GET conversations
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
   try {

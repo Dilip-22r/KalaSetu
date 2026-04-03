@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import "./Home.css";
 import Navbar from "../common/Navbar";
@@ -23,10 +24,87 @@ const categoryIcons = {
   announcement: "fi fi-sr-megaphone",
 };
 
-function PostCard({ post, currentUser, onLike, onShowLikes }) {
+function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
+  const disliked = post.dislikes?.includes(currentUser?._id);
+  const reposted = post.reposts?.includes(currentUser?._id);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showFullPost, setShowFullPost] = useState(false);
+  const [shareUsers, setShareUsers] = useState([]);
+  const [shareSearch, setShareSearch] = useState("");
+  const [sentTo, setSentTo] = useState([]);
+  const [shareNote, setShareNote] = useState("");
+  const repostRef = useState(null);
   const categoryIconClass = categoryIcons[post.category] || "fi fi-sr-search";
+
+  const handleToggleComments = async () => {
+    if (!showComments && comments.length === 0) {
+      setLoadingComments(true);
+      try {
+        const res = await axios.get(`${API}/posts/${post._id}/comments`);
+        setComments(res.data);
+      } catch { setComments([]); }
+      setLoadingComments(false);
+    }
+    setShowComments((v) => !v);
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API}/posts/${post._id}/comments`,
+        { text: commentText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setComments((prev) => [...prev, res.data]);
+      setCommentText("");
+    } catch { /* silent */ }
+    setSubmitting(false);
+  };
+
+  const handleOpenShare = async () => {
+    setShowShareModal(true);
+    setShareSearch("");
+    setSentTo([]);
+    setShareNote("");
+    try {
+      const res = await axios.get(`${API}/profiles/creators`);
+      setShareUsers(res.data);
+    } catch { setShareUsers([]); }
+  };
+
+  const handleSendShare = async (recipientId) => {
+    if (sentTo.includes(recipientId)) return;
+    const token = localStorage.getItem("token");
+    const postUrl = `${window.location.origin}/post/${post._id}`;
+    const text = shareNote.trim()
+      ? `${shareNote}\n\n${postUrl}`
+      : `Check out this post: ${postUrl}`;
+    try {
+      await axios.post(
+        `${API}/messages`,
+        { receiver: recipientId, text },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSentTo((prev) => [...prev, recipientId]);
+    } catch { /* silent */ }
+  };
+
+  const filteredShareUsers = shareUsers.filter((p) => {
+    const name = (p.displayName || p.user?.fullName || p.user?.username || "").toLowerCase();
+    return name.includes(shareSearch.toLowerCase()) && p.user?._id !== currentUser?._id;
+  });
 
   return (
     <div className="post-card">
@@ -42,10 +120,7 @@ function PostCard({ post, currentUser, onLike, onShowLikes }) {
           </span>
           <span className="post-date">
             <i className="fi fi-sr-calendar" />{" "}
-            {new Date(post.createdAt).toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "short",
-            })}
+            {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
           </span>
         </div>
 
@@ -68,27 +143,183 @@ function PostCard({ post, currentUser, onLike, onShowLikes }) {
               <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
             </div>
           </div>
-          <div className="post-actions">
-            <button
-              className={`like-btn ${liked ? "liked" : ""}`}
-              onClick={() => onLike(post._id)}
-              disabled={!currentUser}
-            >
-              <i className="fi fi-sr-heart" />
-              {liked ? "Liked" : "Like"}{" "}
-              <span
-                className="likes-count"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onShowLikes(post._id, post.likes?.length || 0);
-                }}
-              >
-                {post.likes?.length || 0}
-              </span>
-            </button>
-          </div>
+          <button className="view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
+            <i className="fi fi-sr-expand" />
+          </button>
         </div>
+
+        <div className="post-actions">
+          {/* Like */}
+          <button className={`post-action-btn like ${liked ? "active" : ""}`} onClick={() => onLike(post._id)} disabled={!currentUser} title="Like">
+            <i className="fi fi-sr-heart" />
+            <span className="action-count" onClick={(e) => { e.stopPropagation(); onShowLikes(post._id, post.likes?.length || 0); }}>
+              {post.likes?.length || 0}
+            </span>
+          </button>
+
+          {/* Dislike */}
+          <button className={`post-action-btn dislike ${disliked ? "active" : ""}`} onClick={() => onDislike(post._id)} disabled={!currentUser} title="Dislike">
+            <i className="fi fi-sr-thumbs-down" />
+            {post.dislikes?.length > 0 && <span className="action-count">{post.dislikes.length}</span>}
+          </button>
+
+          {/* Comment */}
+          <button className={`post-action-btn comment ${showComments ? "active" : ""}`} onClick={handleToggleComments} title="Comment">
+            <i className="fi fi-sr-comment" />
+            {(post.comments?.length > 0 || comments.length > 0) && (
+              <span className="action-count">{comments.length || post.comments?.length}</span>
+            )}
+          </button>
+
+          {/* Repost — LinkedIn-style dropdown */}
+          <div className="post-action-wrap" ref={repostRef}>
+            <button
+              className={`post-action-btn repost ${reposted ? "active" : ""}`}
+              onClick={() => currentUser && setShowRepostMenu((v) => !v)}
+              disabled={!currentUser}
+              title="Repost"
+            >
+              <i className="fi fi-sr-arrows-retweet" />
+              {post.reposts?.length > 0 && <span className="action-count">{post.reposts.length}</span>}
+            </button>
+            {showRepostMenu && (
+              <div className="post-repost-menu">
+                <button onClick={() => { onRepost(post._id); setShowRepostMenu(false); }}>
+                  <i className="fi fi-sr-arrows-retweet" />
+                  {reposted ? "Undo repost" : "Repost"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Share — LinkedIn-style send modal */}
+          <button className="post-action-btn share" onClick={handleOpenShare} disabled={!currentUser} title="Send">
+            <i className="fi fi-sr-paper-plane-top" />
+          </button>
+        </div>
+
+        {/* Comments panel */}
+        {showComments && (
+          <div className="comments-section">
+            {loadingComments ? (
+              <div className="comments-loading"><div className="spinner" /></div>
+            ) : (
+              <>
+                <div className="comments-list">
+                  {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
+                  {comments.map((c, i) => (
+                    <div key={c._id || i} className="comment-item">
+                      <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                      <div className="comment-body">
+                        <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
+                        <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
+                        <p className="comment-text">{c.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {currentUser && (
+                  <form className="comment-form" onSubmit={handleAddComment}>
+                    <input className="comment-input" placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} disabled={submitting} />
+                    <button className="comment-submit" type="submit" disabled={submitting || !commentText.trim()}>
+                      <i className="fi fi-sr-paper-plane" />
+                    </button>
+                  </form>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Full post modal — rendered via portal outside card */}
+      {showFullPost && createPortal(
+        <div className="full-post-overlay" onClick={() => setShowFullPost(false)}>
+          <div className="full-post-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="full-post-close" onClick={() => setShowFullPost(false)}>
+              <i className="fi fi-sr-cross" />
+            </button>
+            {post.image && (
+              <div className="full-post-image-wrap">
+                <img src={post.image} alt={post.title} className="full-post-image" />
+              </div>
+            )}
+            <div className="full-post-body">
+              <div className="full-post-meta">
+                <span className="post-category"><i className={categoryIconClass} /> {post.category}</span>
+                <span className="post-date">
+                  <i className="fi fi-sr-calendar" />{" "}
+                  {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+              </div>
+              <h2 className="full-post-title">{post.title}</h2>
+              <div className="full-post-author" onClick={() => { setShowFullPost(false); navigate(`/profile/${post.author?._id}`); }}>
+                <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+                <div>
+                  <span className="author-name">{post.author?.fullName}</span>
+                  <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
+                </div>
+              </div>
+              <p className="full-post-content">{post.content}</p>
+              {post.tags?.length > 0 && (
+                <div className="post-tags">
+                  {post.tags.map((tag, i) => <span key={i} className="tag">#{tag}</span>)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Share modal — rendered via portal outside card */}
+      {showShareModal && createPortal(
+        <div className="share-modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="share-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="share-modal-header">
+              <h3>Send post</h3>
+              <button className="close-modal-btn" onClick={() => setShowShareModal(false)}>✕</button>
+            </div>
+            <div className="share-post-preview">
+              <strong>{post.title}</strong>
+              <span className="share-post-author">by {post.author?.fullName}</span>
+            </div>
+            <textarea
+              className="share-note-input"
+              placeholder="Add a note (optional)..."
+              value={shareNote}
+              onChange={(e) => setShareNote(e.target.value)}
+              rows={2}
+            />
+            <input
+              className="share-search-input"
+              placeholder="Search people..."
+              value={shareSearch}
+              onChange={(e) => setShareSearch(e.target.value)}
+            />
+            <div className="share-users-list">
+              {filteredShareUsers.length === 0 && <p className="no-comments">No users found.</p>}
+              {filteredShareUsers.map((p) => (
+                <div key={p.user?._id} className="share-user-item">
+                  <div className="share-user-avatar">{(p.displayName || p.user?.fullName || p.user?.username)?.[0]?.toUpperCase()}</div>
+                  <div className="share-user-info">
+                    <span className="share-user-name">{p.displayName || p.user?.fullName}</span>
+                    <span className={`role-badge ${p.user?.role}`}>{p.user?.role}</span>
+                  </div>
+                  <button
+                    className={`share-send-btn ${sentTo.includes(p.user?._id) ? "sent" : ""}`}
+                    onClick={() => handleSendShare(p.user?._id)}
+                    disabled={sentTo.includes(p.user?._id)}
+                  >
+                    {sentTo.includes(p.user?._id) ? <><i className="fi fi-sr-check" /> Sent</> : <><i className="fi fi-sr-paper-plane-top" /> Send</>}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -166,6 +397,38 @@ function Home() {
     }
   };
 
+  const handleDislike = async (postId) => {
+    const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isDisliked = post.dislikes?.includes(user._id);
+      const updatedDislikes = isDisliked
+        ? (post.dislikes || []).filter((id) => id !== user._id)
+        : [...(post.dislikes || []), user._id];
+      return { ...post, dislikes: updatedDislikes };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleRepost = async (postId) => {
+    const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isReposted = post.reposts?.includes(user._id);
+      const updatedReposts = isReposted
+        ? (post.reposts || []).filter((id) => id !== user._id)
+        : [...(post.reposts || []), user._id];
+      return { ...post, reposts: updatedReposts };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
   if (!user) return null;
 
   const roleLabel =
@@ -195,10 +458,6 @@ function Home() {
                     : "Browse artisan & NGO posts."}
                 </p>
               </div>
-            </div>
-
-            <div className="welcome-role-badge">
-              <span className={`big-role-badge ${user.role}`}>{roleLabel}</span>
             </div>
 
             {canPost && (
@@ -273,6 +532,8 @@ function Home() {
                   post={post}
                   currentUser={user}
                   onLike={handleLike}
+                  onDislike={handleDislike}
+                  onRepost={handleRepost}
                   onShowLikes={handleLikesClick}
                 />
               ))}

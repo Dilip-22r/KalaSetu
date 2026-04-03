@@ -59,6 +59,9 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [moreModal, setMoreModal] = useState(null);
   const [moreToast, setMoreToast] = useState("");
@@ -104,6 +107,17 @@ function Profile() {
     }
 
     navigate(`/messages/${userId}`);
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser || !token) return;
+    setFollowLoading(true);
+    try {
+      const res = await axios.put(`${API}/profiles/${userId}/follow`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setFollowing(res.data.following);
+      setFollowersCount(res.data.followersCount);
+    } catch { /* silent */ }
+    setFollowLoading(false);
   };
 
   const handleMoreAction = (action) => {
@@ -156,6 +170,14 @@ function Profile() {
       } catch (err) {
         setPosts([]);
         console.error("Error fetching user posts:", err);
+      }
+
+      if (currentUser && currentUser._id !== userId && token) {
+        try {
+          const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
+          setFollowing(fsRes.data.following);
+          setFollowersCount(fsRes.data.followersCount);
+        } catch { /* silent */ }
       }
     };
 
@@ -342,23 +364,22 @@ function Profile() {
 
               <div className="prof-stats-row">
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-image" />
-                  </span>
+                  <span className="prof-stat-icon"><i className="fi fi-sr-image" /></span>
                   <strong>{posts.length}</strong>
                   <small>Posts</small>
                 </div>
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-heart" />
-                  </span>
+                  <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
                   <strong>{totalLikes}</strong>
                   <small>Likes</small>
                 </div>
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-palette" />
-                  </span>
+                  <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
+                  <strong>{followersCount}</strong>
+                  <small>Followers</small>
+                </div>
+                <div className="prof-stat-card">
+                  <span className="prof-stat-icon"><i className="fi fi-sr-palette" /></span>
                   <strong>{skillTags.length || 1}</strong>
                   <small>{skillTags.length ? "Skills" : "Profile Focus"}</small>
                 </div>
@@ -372,9 +393,13 @@ function Profile() {
                 </button>
               )}
               {currentUser && !isOwn && (
-                <button className="prof-primary-btn" onClick={handleMessageClick}>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Collaborate
+                <button
+                  className={`prof-primary-btn ${following ? "prof-following-btn" : ""}`}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                >
+                  <i className={`fi ${following ? "fi-sr-user-check" : "fi-sr-user-add"}`} />
+                  {following ? "Following" : "Follow"}
                 </button>
               )}
               {currentUser && !isOwn && (
@@ -567,14 +592,10 @@ function Profile() {
 
             {currentUser && !isOwn && (
               <div className="prof-card prof-contact-rail">
-                <h3>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Contact
-                </h3>
+                <h3><i className="fi fi-sr-comment-alt-dots" /> Contact</h3>
                 <p>Open a conversation for collaborations, cultural projects, or event opportunities.</p>
                 <button className="prof-primary-btn" onClick={handleMessageClick}>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Contact / Collaborate
+                  <i className="fi fi-sr-comment-alt-dots" /> Message
                 </button>
               </div>
             )}

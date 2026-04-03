@@ -5,7 +5,6 @@ import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-
 // GET all artisans & NGOs (for search)
 router.get("/creators", async (req, res) => {
   try {
@@ -27,6 +26,41 @@ router.get("/creators", async (req, res) => {
 
     const profiles = await Profile.find(profileFilter).populate("user", "username fullName role email").lean();
     res.json(profiles);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// FOLLOW / UNFOLLOW user
+router.put("/:userId/follow", requireAuth, async (req, res) => {
+  try {
+    if (req.params.userId === req.user.id)
+      return res.status(400).json({ message: "Cannot follow yourself" });
+    const target = await User.findById(req.params.userId);
+    const me = await User.findById(req.user.id);
+    if (!target || !me) return res.status(404).json({ message: "User not found" });
+    const isFollowing = me.following.includes(target._id);
+    if (isFollowing) {
+      me.following.pull(target._id);
+      target.followers.pull(me._id);
+    } else {
+      me.following.push(target._id);
+      target.followers.push(me._id);
+    }
+    await Promise.all([me.save(), target.save()]);
+    res.json({ following: !isFollowing, followersCount: target.followers.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET follow status
+router.get("/:userId/follow-status", requireAuth, async (req, res) => {
+  try {
+    const me = await User.findById(req.user.id);
+    const isFollowing = me.following.includes(req.params.userId);
+    const target = await User.findById(req.params.userId);
+    res.json({ following: isFollowing, followersCount: target?.followers?.length || 0 });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -22,6 +22,12 @@ function Register() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedPx, setCroppedPx] = useState(null);
+  
+  const skillOptions = [
+    "Handloom Weaving", "Pottery", "Wood Carving", "Bharatanatyam",
+    "Madhubani Painting", "Classical Music", "Storytelling", "Folk Dance", "Other"
+  ];
+  const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false);
 
   const {
     register,
@@ -37,6 +43,15 @@ function Register() {
   });
 
   const selectedRole = watch("userType");
+  const selectedSkills = watch("skills") || [];
+
+  const toggleSkill = (skill) => {
+    if (selectedSkills.includes(skill)) {
+      setValue("skills", selectedSkills.filter(s => s !== skill), { shouldValidate: true });
+    } else {
+      setValue("skills", [...selectedSkills, skill], { shouldValidate: true });
+    }
+  };
 
   const onCropComplete = useCallback((_croppedArea, croppedAreaPixels) => {
     setCroppedPx(croppedAreaPixels);
@@ -308,19 +323,42 @@ function Register() {
                       </div>
                       <div className="reg-field">
                         <label>Skills * (Select multiple)</label>
-                        <select multiple className="multiple-select" {...register("skills", { required: "Skills are required" })}>
-                          <option value="Handloom Weaving">Handloom Weaving</option>
-                          <option value="Pottery">Pottery</option>
-                          <option value="Wood Carving">Wood Carving</option>
-                          <option value="Bharatanatyam">Bharatanatyam</option>
-                          <option value="Madhubani Painting">Madhubani Painting</option>
-                          <option value="Classical Music">Classical Music</option>
-                          <option value="Storytelling">Storytelling</option>
-                          <option value="Folk Dance">Folk Dance</option>
-                          <option value="Other">Other (Please specify)</option>
+                        <div className="reg-multi-select">
+                          <div 
+                            className={`reg-multi-select-trigger ${skillsDropdownOpen ? "open" : ""}`}
+                            onClick={() => setSkillsDropdownOpen(!skillsDropdownOpen)}
+                          >
+                            <span>
+                              {selectedSkills.length > 0
+                                ? `${selectedSkills.length} skill${selectedSkills.length > 1 ? 's' : ''} selected`
+                                : "Select your skills..."}
+                            </span>
+                            <i className={`fi ${skillsDropdownOpen ? "fi-sr-caret-up" : "fi-sr-caret-down"}`} />
+                          </div>
+                          
+                          <div className={`reg-multi-select-dropdown ${skillsDropdownOpen ? "open" : ""}`}>
+                            {skillOptions.map((skill) => {
+                              const isSelected = selectedSkills.includes(skill);
+                              return (
+                                <div 
+                                  key={skill} 
+                                  className={`reg-multi-select-option ${isSelected ? "selected" : ""}`}
+                                  onClick={() => toggleSkill(skill)}
+                                >
+                                  <div className="reg-multi-cb">
+                                    <i className="fi fi-br-check" />
+                                  </div>
+                                  <span>{skill}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* Hidden input to maintain hook-form validation */}
+                        <select multiple hidden {...register("skills", { required: "Skills are required" })}>
+                          {skillOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                         {errors.skills && <small>{errors.skills.message}</small>}
-                        <small className="opt-label">Hold Ctrl or Cmd to select multiple</small>
                       </div>
 
                       {watch("skills") && watch("skills").includes("Other") && (

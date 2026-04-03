@@ -165,7 +165,12 @@ function Profile() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== currentUser._id)
           : [...post.likes, currentUser._id];
-        return { ...post, likes: updatedLikes };
+          
+        const updatedDislikes = !isLiked && post.dislikes?.includes(currentUser._id)
+          ? post.dislikes.filter((id) => id !== currentUser._id)
+          : post.dislikes || [];
+          
+        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
     try {
@@ -182,7 +187,12 @@ function Profile() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== currentUser._id)
         : [...(post.dislikes || []), currentUser._id];
-      return { ...post, dislikes: updatedDislikes };
+        
+      const updatedLikes = !isDisliked && post.likes?.includes(currentUser._id)
+        ? post.likes.filter((id) => id !== currentUser._id)
+        : post.likes || [];
+        
+      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
       await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -405,19 +415,9 @@ function Profile() {
                   <small>Posts</small>
                 </div>
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
-                  <strong>{totalLikes}</strong>
-                  <small>Likes</small>
-                </div>
-                <div className="prof-stat-card">
                   <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
                   <strong>{followersCount}</strong>
                   <small>Followers</small>
-                </div>
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-palette" /></span>
-                  <strong>{skillTags.length || 1}</strong>
-                  <small>{skillTags.length ? "Skills" : "Profile Focus"}</small>
                 </div>
               </div>
             </div>

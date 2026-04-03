@@ -6,7 +6,7 @@
 
 ## 📌 Overview
 
-KalaSetu is a full-stack web application that connects traditional artisans and cultural NGOs with a wider audience. Users can explore cultural posts, discover creators, and engage with India's rich artistic heritage. Registered artisans and NGOs gain additional powers — creating posts, promoting events, and messaging each other directly.
+KalaSetu is a full-stack web application that connects traditional artisans and cultural NGOs with a wider audience. Users can explore cultural posts, discover creators, and engage with India's rich artistic heritage. Registered artisans and NGOs gain additional powers — creating posts, promoting events, and messaging each other direct
 
 ---
 

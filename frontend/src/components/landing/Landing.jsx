@@ -1,9 +1,13 @@
+
+
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./Landing.css";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
+import cultureImg from "../../assets/culture.jpeg";
+import IntroAnimation from "./Introanimation";
 
-const artSymbols = ["🎨","🪘","🎭","🌸","🏺","🪁","🧵","🪗","🎋","🌺","🎐","🧿","🪔","🥁","🎻","💫"];
+const artSymbols = ["🎨", "🪘", "🎭", "🌸", "🏺", "🪁", "🧵", "🪗", "🎋", "🌺", "🎐", "🧿", "🪔", "🥁", "🎻", "💫"];
 
 function FloatingSymbol({ symbol, style }) {
   return <span className="float-symbol" style={style}>{symbol}</span>;
@@ -73,6 +77,7 @@ function PolicyModal({ type, onClose }) {
 
 function Landing() {
   const navigate = useNavigate();
+  const [introDone, setIntroDone] = useState(false); // ← ADDED
   const [showTop, setShowTop] = useState(false);
   const [modal, setModal] = useState(null);
 
@@ -95,6 +100,11 @@ function Landing() {
       },
     }))
   );
+
+  // ← ADDED: show intro first
+  if (!introDone) {
+    return <IntroAnimation onDone={() => setIntroDone(true)} />;
+  }
 
   return (
     <div className="l-root">
@@ -150,38 +160,7 @@ function Landing() {
         </div>
 
         <div className="l-hero-right">
-          <div className="l-art-grid">
-            <div className="l-art-card l-card-1">
-              <span>🎨</span>
-              <p>Madhubani Painting</p>
-              <small>Bihar, India</small>
-            </div>
-            <div className="l-art-card l-card-2">
-              <span>🪘</span>
-              <p>Dhol Traditions</p>
-              <small>Punjab, India</small>
-            </div>
-            <div className="l-art-card l-card-3">
-              <span>🧵</span>
-              <p>Banarasi Weaving</p>
-              <small>Varanasi, India</small>
-            </div>
-            <div className="l-art-card l-card-4">
-              <span>🏺</span>
-              <p>Pottery Craft</p>
-              <small>Rajasthan, India</small>
-            </div>
-            <div className="l-art-card l-card-5">
-              <span>💃</span>
-              <p>Kathakali Dance</p>
-              <small>Kerala, India</small>
-            </div>
-            <div className="l-art-card l-card-6">
-              <span>🌸</span>
-              <p>Rangoli Art</p>
-              <small>All of India</small>
-            </div>
-          </div>
+          <img src={cultureImg} alt="Indian Culture" className="l-culture-img" />
         </div>
       </section>
 

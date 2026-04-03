@@ -4,6 +4,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useAuthStore } from "../../store/useAuthStore";
 import "./Register.css";
+import Navbar from "../common/Navbar";
 
 const API = "http://localhost:5000";
 
@@ -11,13 +12,7 @@ function Register() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    useAuthStore.getState().setAuthUser(null);
-    navigate("/");
-  };
+  const setAuthUser = useAuthStore((state) => state.setAuthUser);
 
   const {
     register,
@@ -28,11 +23,9 @@ function Register() {
   const onFormSubmit = async (data) => {
     setLoading(true);
     setError("");
+
     try {
       const storedUser = JSON.parse(localStorage.getItem("user"));
-      const token = localStorage.getItem("token");
-
-      // 1. Upgrade role — get back a fresh token
       const roleRes = await axios.put(`${API}/auth/upgrade-role`, {
         userId: storedUser._id,
         newRole: data.userType.toLowerCase(),
@@ -40,7 +33,6 @@ function Register() {
 
       const newToken = roleRes.data.token;
 
-      // 2. Save profile details using the NEW token
       await axios.post(
         `${API}/profiles`,
         {
@@ -57,38 +49,30 @@ function Register() {
       );
 
       const rawUser = roleRes.data.user;
-
-      // 3. Rebuild user object cleanly — Mongoose docs don't spread reliably
       const updatedUser = {
         _id: rawUser._id || storedUser._id,
         fullName: rawUser.fullName || storedUser.fullName,
         email: rawUser.email || storedUser.email,
         username: rawUser.username || storedUser.username,
-        role: rawUser.role,   // this is the critical field
+        role: rawUser.role,
       };
+
       localStorage.setItem("user", JSON.stringify(updatedUser));
       localStorage.setItem("token", newToken);
-
-      console.log("Role upgraded to:", updatedUser.role, "| New token:", newToken?.slice(0, 20) + "...");
-
+      setAuthUser(updatedUser);
       navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong. Please try again.");
     }
+
     setLoading(false);
   };
 
   return (
     <div className="theme-bg">
-      <nav className="navbar">
-        <h1 className="brand-title">KalaSetu</h1>
-        <div className="nav-buttons">
-          <button onClick={() => navigate("/home")}>Back</button>
-          <button onClick={() => setShowLogoutModal(true)}>Logout</button>
-        </div>
-      </nav>
+      <Navbar />
 
-      <div className="reg-container">
+      <div className="reg-shell">
         <div className="reg-card">
           <h2 className="theme-title">Join as Artisan or NGO</h2>
           <p className="subtitle">Complete your profile to unlock posting and messaging</p>
@@ -112,7 +96,11 @@ function Register() {
                 <input
                   type="number"
                   placeholder="Your age"
-                  {...register("age", { required: "Age is required", min: { value: 12, message: "Must be at least 12" }, max: { value: 100, message: "Invalid age" } })}
+                  {...register("age", {
+                    required: "Age is required",
+                    min: { value: 12, message: "Must be at least 12" },
+                    max: { value: 100, message: "Invalid age" },
+                  })}
                 />
                 {errors.age && <small>{errors.age.message}</small>}
               </div>
@@ -165,7 +153,7 @@ function Register() {
             <div className="reg-field">
               <label>About You *</label>
               <textarea
-                placeholder="Tell the community about your cultural journey, your craft, and what inspires you..."
+                placeholder="Tell the community about your cultural journey, your craft, and what inspires you."
                 rows={4}
                 {...register("about", { required: "Please write something about yourself" })}
               />
@@ -173,33 +161,18 @@ function Register() {
             </div>
 
             <div className="reg-field">
-              <label>Profile Photo URL <span className="opt-label">(optional)</span></label>
-              <input
-                type="url"
-                placeholder="https://example.com/your-photo.jpg"
-                {...register("photo")}
-              />
+              <label>
+                Profile Photo URL <span className="opt-label">(optional)</span>
+              </label>
+              <input type="url" placeholder="https://example.com/your-photo.jpg" {...register("photo")} />
             </div>
 
             <button type="submit" className="reg-submit" disabled={loading}>
-              {loading ? "Creating Profile..." : "✨ Create My Profile"}
+              {loading ? "Creating Profile..." : "Create My Profile"}
             </button>
           </form>
         </div>
       </div>
-
-      {showLogoutModal && (
-        <div className="reg-logout-overlay">
-          <div className="reg-logout-modal">
-            <h3>Logout</h3>
-            <p>Are you sure you want to log out?</p>
-            <div className="reg-logout-actions">
-              <button className="reg-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-              <button className="reg-logout-confirm" onClick={handleLogout}>Logout</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

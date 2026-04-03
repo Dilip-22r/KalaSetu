@@ -81,7 +81,7 @@
 /* Hero */
 .l-hero {
   position: relative; z-index: 1;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: flex-start; justify-content: space-between;
   padding: 80px 60px 60px;
   min-height: 90vh;
   gap: 40px;
@@ -134,34 +134,17 @@
 .l-terms { font-size: 12px; color: #aaa; margin-top: 16px; animation: fadeSlideUp 0.6s 0.4s ease both; }
 .l-terms span { color: var(--teal); cursor: pointer; }
 
-/* Art grid */
-.l-hero-right { flex: 1; max-width: 500px; }
-.l-art-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 14px;
+/* Culture image */
+.l-hero-right { flex: 1.4; max-width: 640px; }
+.l-culture-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 30px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+  animation: fadeSlideUp 0.6s 0.3s ease both;
+  display: block;
 }
-.l-art-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px 14px;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.07);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  animation: fadeSlideUp 0.5s ease both;
-}
-.l-art-card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
-.l-art-card span { font-size: 32px; display: block; margin-bottom: 8px; }
-.l-art-card p { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.l-art-card small { font-size: 10px; color: var(--muted); }
-
-.l-card-1 { animation-delay: 0.1s; border-top: 3px solid var(--teal); }
-.l-card-2 { animation-delay: 0.2s; border-top: 3px solid var(--terra); }
-.l-card-3 { animation-delay: 0.3s; border-top: 3px solid var(--gold); }
-.l-card-4 { animation-delay: 0.4s; border-top: 3px solid var(--terra); }
-.l-card-5 { animation-delay: 0.5s; border-top: 3px solid var(--teal); }
-.l-card-6 { animation-delay: 0.6s; border-top: 3px solid var(--gold); }
 
 /* Stats */
 .l-stats {
@@ -364,7 +347,7 @@
 
 @media (max-width: 640px) {
   .l-nav-links .l-nav-ghost { display: none; }
-  .l-art-grid { grid-template-columns: repeat(2, 1fr); }
+  .l-culture-img { width: 100%; }
   .l-features-grid { grid-template-columns: 1fr; }
   .l-stats { flex-direction: column; gap: 20px; }
   .l-cta-banner { margin: 16px; border-radius: 16px; }

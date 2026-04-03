@@ -1,10 +1,54 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { useAuthStore } from "../store/useAuthStore";
+import Navbar from "../components/common/Navbar";
 import "./Profile.css";
+import { PostCard } from "../components/home/Home";
+import "../components/home/Home.css";
 
 const API = "http://localhost:5000";
+
+const getRoleLabel = (role) => {
+  if (role === "artisan") return "Artisan";
+  if (role === "ngo") return "NGO";
+  return "Member";
+};
+
+const getProfileStoryline = (role) => {
+  if (role === "ngo") {
+    return "Building cultural impact through collaboration, outreach, and community storytelling.";
+  }
+
+  return "Preserving culture through craft, performance, and stories rooted in local identity.";
+};
+
+const getProfileTagline = (role, skills, location) => {
+  const primarySkill = skills[0];
+  const locationText = location ? ` from ${location}` : "";
+
+  if (role === "ngo") {
+    return `Community-led organisation${locationText} connecting artisans, stories, and cultural opportunities with purpose.`;
+  }
+
+  if (primarySkill) {
+    return `Passionate ${primarySkill} practitioner${locationText}, preserving tradition through performance, craft, and storytelling.`;
+  }
+
+  return `Cultural creator${locationText}, building meaningful connections through tradition, identity, and shared stories.`;
+};
+
+const getRegionLabel = (location) => {
+  if (!location) return "";
+
+  const parts = location.split(",").map((part) => part.trim()).filter(Boolean);
+  return parts[parts.length - 1] || location;
+};
+
+const getSkillTags = (skills) =>
+  (skills || "")
+    .split(",")
+    .map((skill) => skill.trim())
+    .filter(Boolean);
 
 function Profile() {
   const navigate = useNavigate();
@@ -17,64 +61,66 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [moreModal, setMoreModal] = useState(null); // null | 'report' | 'block'
+  const [moreModal, setMoreModal] = useState(null);
   const [moreToast, setMoreToast] = useState("");
-
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [activeTab, setActiveTab] = useState("posts");
 
   const isOwn = currentUser && currentUser._id === userId;
 
-  useEffect(() => {
-    fetchProfile();
-    fetchUserPosts();
-  }, [userId]);
-
-  const fetchProfile = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${API}/profiles/${userId}`);
-      setProfile(res.data);
-    } catch (err) {
-      if (err.response?.status === 404) setNotFound(true);
-    }
-    setLoading(false);
-  };
-
-  const fetchUserPosts = async () => {
-    try {
-      const res = await axios.get(`${API}/posts`);
-      setPosts(res.data.filter(p => p.author?._id === userId));
-    } catch { setPosts([]); }
+  const openRegisterPrompt = () => {
+    setShowRegisterMsg(true);
+    setTimeout(() => setShowRegisterMsg(false), 3000);
   };
 
   const handleDeletePost = async (postId) => {
     if (!window.confirm("Delete this post?")) return;
+
     const previousPosts = [...posts];
-    setPosts(posts.filter(p => p._id !== postId)); 
+    setPosts(posts.filter((post) => post._id !== postId));
+
     try {
-      await axios.delete(`${API}/posts/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.delete(`${API}/posts/${postId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     } catch {
       setPosts(previousPosts);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    useAuthStore.getState().setAuthUser(null);
-    navigate("/");
-  };
-
   const handleEditClick = () => {
     if (currentUser?.role === "user") {
-      setShowRegisterMsg(true);
-      setTimeout(() => setShowRegisterMsg(false), 3000);
+      openRegisterPrompt();
       return;
     }
+
     navigate("/edit-profile");
+  };
+
+  const handleMessageClick = () => {
+    if (currentUser?.role === "user") {
+      openRegisterPrompt();
+      return;
+    }
+
+    navigate(`/messages/${userId}`);
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser || !token) return;
+    setFollowLoading(true);
+    try {
+      const res = await axios.put(`${API}/profiles/${userId}/follow`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setFollowing(res.data.following);
+      setFollowersCount(res.data.followersCount);
+    } catch { /* silent */ }
+    setFollowLoading(false);
   };
 
   const handleMoreAction = (action) => {
@@ -83,210 +129,453 @@ function Profile() {
   };
 
   const confirmMoreAction = () => {
-    const msg = moreModal === "block"
-      ? "User has been blocked."
-      : "Report submitted. Our team will review it shortly.";
+    const message =
+      moreModal === "block"
+        ? "User has been blocked."
+        : "Report submitted. Our team will review it shortly.";
+
     setMoreModal(null);
-    setMoreToast(msg);
+    setMoreToast(message);
     setTimeout(() => setMoreToast(""), 3000);
   };
 
   const handleLikesClick = async (postId, likesCount) => {
     if (likesCount === 0) return;
+
     setLikesModalPostId(postId);
     setLoadingLikes(true);
+
     try {
       const res = await axios.get(`${API}/posts/${postId}/likes`);
       setLikers(res.data);
-    } catch (err) { }
+    } catch (err) {
+      console.error("Error fetching likes:", err);
+    }
+
     setLoadingLikes(false);
   };
 
-  const renderNavbar = () => (
-    <nav className="prof-navbar">
-      <h1 onClick={() => navigate(currentUser ? "/home" : "/")}>KalaSetu</h1>
-      <div className="prof-nav-btns">
-        <button onClick={() => navigate(currentUser ? "/home" : "/")}>← Dashboard</button>
-        {isOwn && (
-          <button className="prof-edit-btn" onClick={handleEditClick}>
-            ✏️ Edit Profile
-          </button>
-        )}
-        {currentUser && !isOwn && currentUser.role !== "user" && (
-          <button className="prof-msg-btn" onClick={() => navigate(`/messages/${userId}`)}>
-            💬 Message
-          </button>
-        )}
-        {/* More button — only shown when viewing someone else's profile */}
-        {currentUser && !isOwn && (
-          <div className="prof-more-wrap">
-            <button
-              className="prof-more-btn"
-              onClick={() => setShowMoreMenu((v) => !v)}
-              title="More options"
-            >
-              More ···
-            </button>
-            {showMoreMenu && (
-              <>
-                <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
-                <div className="prof-more-dropdown">
-                  <button onClick={() => handleMoreAction("block")}>
-                    🚫 Block user
-                  </button>
-                  <button onClick={() => handleMoreAction("report")}>
-                    🚨 Report user
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        <button className="prof-logout-btn" onClick={() => setShowLogoutModal(true)}>Logout</button>
-      </div>
-    </nav>
-  );
+  const handleLike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(
+      posts.map((post) => {
+        if (post._id !== postId) return post;
+        const isLiked = post.likes.includes(currentUser._id);
+        const updatedLikes = isLiked
+          ? post.likes.filter((id) => id !== currentUser._id)
+          : [...post.likes, currentUser._id];
+        return { ...post, likes: updatedLikes };
+      })
+    );
+    try {
+      await axios.put(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleDislike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isDisliked = post.dislikes?.includes(currentUser._id);
+      const updatedDislikes = isDisliked
+        ? (post.dislikes || []).filter((id) => id !== currentUser._id)
+        : [...(post.dislikes || []), currentUser._id];
+      return { ...post, dislikes: updatedDislikes };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleRepost = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isReposted = post.reposts?.includes(currentUser._id);
+      const updatedReposts = isReposted
+        ? (post.reposts || []).filter((id) => id !== currentUser._id)
+        : [...(post.reposts || []), currentUser._id];
+      return { ...post, reposts: updatedReposts };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        const profileRes = await axios.get(`${API}/profiles/${userId}`);
+        setProfile(profileRes.data);
+      } catch (err) {
+        if (err.response?.status === 404) setNotFound(true);
+        console.error("Error fetching profile:", err);
+      } finally {
+        setLoading(false);
+      }
+
+      try {
+        const postsRes = await axios.get(`${API}/posts`);
+        const allPosts = postsRes.data;
+        setPosts(allPosts);
+      } catch (err) {
+        setPosts([]);
+        console.error("Error fetching user posts:", err);
+      }
+
+      if (currentUser && currentUser._id !== userId && token) {
+        try {
+          const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
+          setFollowing(fsRes.data.following);
+          setFollowersCount(fsRes.data.followersCount);
+        } catch { /* silent */ }
+      }
+    };
+
+    loadProfileData();
+  }, [userId]);
 
   if (loading) {
     return (
       <div className="prof-bg">
-        {renderNavbar()}
-        <div className="prof-loading"><div className="prof-spinner"></div><p>Loading profile...</p></div>
+        <Navbar />
+        <div className="prof-loading">
+          <div className="prof-spinner" />
+          <p>Loading profile...</p>
+        </div>
       </div>
     );
   }
 
-  // Own profile but no registration done yet — show basic info from localStorage
   if (notFound && isOwn) {
-    const roleLabel = currentUser.role === "artisan" ? "🎨 Artisan"
-      : currentUser.role === "ngo" ? "🤝 NGO" : "👤 User";
+    const currentRoleLabel = getRoleLabel(currentUser.role);
+
     return (
       <div className="prof-bg">
-        {renderNavbar()}
+        <Navbar />
         {showRegisterMsg && (
           <div className="prof-register-toast">
-            ⭐ Please register as an Artisan or NGO to edit your profile
+            Register as an Artisan or NGO to edit your profile.
           </div>
         )}
+
         <div className="prof-container">
-          {/* Hero with basic info from localStorage */}
-          <div className="prof-hero">
-            <div className="prof-cover" />
+          <div className="prof-hero prof-hero-empty">
+            <div className="prof-cover">
+              <div className="prof-cover-content">
+                <span className="prof-cover-kicker">KalaSetu Profile</span>
+                <p>Create a trusted cultural profile that tells people what you do and how to connect.</p>
+              </div>
+            </div>
+
             <div className="prof-hero-body">
               <div className="prof-avatar-wrap">
                 <div className="prof-avatar-initials">
                   {currentUser.username?.[0]?.toUpperCase()}
                 </div>
               </div>
-              <div className="prof-hero-info">
+
+              <div className="prof-hero-main">
                 <div className="prof-name-row">
-                  <h2>{currentUser.fullName}</h2>
-                  <span className={`prof-role-badge ${currentUser.role}`}>{roleLabel}</span>
+                  <h2 className="display-serif">{currentUser.fullName}</h2>
+                  <span className={`prof-role-badge ${currentUser.role}`}>{currentRoleLabel}</span>
                 </div>
                 <p className="prof-username">@{currentUser.username}</p>
                 <div className="prof-meta-row">
-                  <span>✉️ {currentUser.email}</span>
+                  <span>
+                    <i className="fi fi-sr-user" />
+                    {currentUser.email}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="prof-basic-cta">
-            <span>🪷</span>
-            <h3>Your profile isn't set up yet</h3>
-            <p>Register as an Artisan or NGO to add your skills, location, and cultural story.</p>
-            <button onClick={() => navigate("/register")}>⭐ Register as Artisan / NGO</button>
-          </div>
-        </div>
-
-      {showLogoutModal && (
-        <div className="prof-logout-overlay">
-          <div className="prof-logout-modal">
-            <h3>Logout</h3>
-            <p>Are you sure you want to log out?</p>
-            <div className="prof-logout-actions">
-              <button className="prof-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-              <button className="prof-logout-confirm" onClick={handleLogout}>Logout</button>
+          <div className="prof-empty-state">
+            <div className="prof-empty-icon">
+              <i className="fi fi-sr-circle-user" />
             </div>
+            <h3 className="display-serif">Your portfolio is ready to be shaped</h3>
+            <p>Complete your profile to add your location, skills, story, and cultural focus.</p>
+            <button
+              className="prof-primary-btn"
+              onClick={() => navigate(currentUser?.role === "user" ? "/register" : "/edit-profile")}
+            >
+              {currentUser?.role === "user" ? "Register as Artisan / NGO" : "Complete Profile"}
+            </button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
     );
   }
 
-  // Someone else's profile not found
   if (notFound || !profile) {
     return (
       <div className="prof-bg">
-        {renderNavbar()}
+        <Navbar />
         <div className="prof-not-found">
-          <span>🪷</span>
-          <h2>Profile Not Found</h2>
-          <p>This user hasn't set up their profile yet.</p>
+          <div className="prof-empty-icon">
+            <i className="fi fi-sr-search" />
+          </div>
+          <h2 className="display-serif">Profile Not Found</h2>
+          <p>This user has not set up their public profile yet.</p>
         </div>
       </div>
     );
   }
 
   const { user: profileUser } = profile;
-  const roleLabel = profileUser?.role === "artisan" ? "🎨 Artisan"
-    : profileUser?.role === "ngo" ? "🤝 NGO" : "👤 User";
-  const joinDate = new Date(profileUser?.createdAt).toLocaleDateString("en-IN", {
-    month: "long", year: "numeric",
-  });
+  const roleLabel = getRoleLabel(profileUser?.role);
+  const joinDate = profileUser?.createdAt
+    ? new Date(profileUser.createdAt).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
+    : "Unknown";
+  const displayName = profile.displayName || profileUser?.fullName || profileUser?.username;
+  const skillTags = getSkillTags(profile.skills);
+  const totalLikes = posts.reduce((sum, post) => sum + (post.likes?.length || 0), 0);
+  const profileStoryline = getProfileStoryline(profileUser?.role);
+  const profileTagline = getProfileTagline(profileUser?.role, skillTags, profile.location);
+  const profileRegion = getRegionLabel(profile.location);
 
   return (
     <div className="prof-bg">
-      {renderNavbar()}
+      <Navbar />
 
-      {/* Toast message when user role clicks Edit Profile */}
       {showRegisterMsg && (
         <div className="prof-register-toast">
-          ⭐ Register as an Artisan or NGO to edit your profile
+          Register as an Artisan or NGO to unlock messaging and profile editing.
         </div>
       )}
 
       <div className="prof-container">
-        {/* Hero */}
         <div className="prof-hero">
-          <div className="prof-cover" />
+          <div className="prof-cover">
+            <div className="prof-cover-content">
+              <span className="prof-cover-kicker">KalaSetu Portfolio</span>
+            </div>
+          </div>
+
           <div className="prof-hero-body">
             <div className="prof-avatar-wrap">
               {profile.photo ? (
-                <img src={profile.photo} alt="" className="prof-avatar-img" />
+                <img src={profile.photo} alt={displayName} className="prof-avatar-img" />
               ) : (
                 <div className="prof-avatar-initials">
                   {profileUser?.username?.[0]?.toUpperCase()}
                 </div>
               )}
             </div>
-            <div className="prof-hero-info">
+
+            <div className="prof-hero-main">
               <div className="prof-name-row">
-                <h2>{profile.displayName || profileUser?.fullName}</h2>
+                <h2 className="display-serif">{displayName}</h2>
                 <span className={`prof-role-badge ${profileUser?.role}`}>{roleLabel}</span>
               </div>
               <p className="prof-username">@{profileUser?.username}</p>
-              <div className="prof-meta-row">
-                {profile.location && <span>📍 {profile.location}</span>}
-                {profile.skills && <span>🎨 {profile.skills}</span>}
-                <span>📅 Joined {joinDate}</span>
+
+              <div className="prof-meta-row" style={{ marginTop: '10px' }}>
+                {profile.location && (
+                  <span>
+                    <i className="fi fi-sr-map-marker" style={{ color: '#d1437b' }} />
+                    {profile.location}
+                  </span>
+                )}
+                {skillTags.length > 0 && (
+                  <span>
+                    <i className="fi fi-sr-palette" style={{ color: '#C4704A' }} />
+                    {skillTags[0]}
+                  </span>
+                )}
+                <span>
+                  <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
+                  Joined {joinDate}
+                </span>
               </div>
+
+              <div className="prof-stats-row">
+                <div className="prof-stat-card">
+                  <span className="prof-stat-icon"><i className="fi fi-sr-apps" /></span>
+                  <strong>{posts.length}</strong>
+                  <small>Posts</small>
+                </div>
+                <div className="prof-stat-card">
+                  <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
+                  <strong>{totalLikes}</strong>
+                  <small>Likes</small>
+                </div>
+                <div className="prof-stat-card">
+                  <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
+                  <strong>{followersCount}</strong>
+                  <small>Followers</small>
+                </div>
+                <div className="prof-stat-card">
+                  <span className="prof-stat-icon"><i className="fi fi-sr-palette" /></span>
+                  <strong>{skillTags.length || 1}</strong>
+                  <small>{skillTags.length ? "Skills" : "Profile Focus"}</small>
+                </div>
+              </div>
+            </div>
+
+            <div className="prof-hero-actions">
+              {isOwn && (
+                <button className="prof-secondary-btn" onClick={handleEditClick}>
+                  Edit Profile
+                </button>
+              )}
+              {currentUser && !isOwn && (
+                <button
+                  className={`prof-primary-btn ${following ? "prof-following-btn" : ""}`}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                >
+                  <i className={`fi ${following ? "fi-sr-user-check" : "fi-sr-user-add"}`} />
+                  {following ? "Following" : "Follow"}
+                </button>
+              )}
+              {currentUser && !isOwn && (
+                <button className="prof-secondary-btn" onClick={handleMessageClick}>
+                  <i className="fi fi-sr-comments" />
+                  Message
+                </button>
+              )}
+              {currentUser && !isOwn && (
+                <div className="prof-more-wrap">
+                  <button
+                    className="prof-more-btn"
+                    onClick={() => setShowMoreMenu((value) => !value)}
+                    title="More options"
+                  >
+                    More
+                  </button>
+                  {showMoreMenu && (
+                    <>
+                      <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
+                      <div className="prof-more-dropdown">
+                        <button onClick={() => handleMoreAction("block")}>Block user</button>
+                        <button onClick={() => handleMoreAction("report")}>Report user</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="prof-body">
-          {/* Sidebar */}
-          <div className="prof-sidebar">
-            {profile.about && (
-              <div className="prof-card">
-                <h3>About</h3>
-                <p>{profile.about}</p>
+          <div className="prof-posts-section">
+            <div className="prof-tabs">
+              <button
+                className={`prof-tab ${activeTab === "posts" ? "active" : ""}`}
+                onClick={() => setActiveTab("posts")}
+              >
+                <i className="fi fi-sr-apps" />
+                Posts
+              </button>
+              <button
+                className={`prof-tab ${activeTab === "reposts" ? "active" : ""}`}
+                onClick={() => setActiveTab("reposts")}
+              >
+                <i className="fi fi-sr-arrows-retweet" />
+                Reposts
+              </button>
+            </div>
+
+            <div className="prof-posts-header">
+              <div>
+                <h3 className="prof-posts-title">
+                  {activeTab === "posts" ? "Cultural Posts" : "Shared Stories"}
+                  <span className="prof-posts-count">
+                    {activeTab === "posts"
+                      ? posts.filter(p => p.author?._id === userId).length
+                      : posts.filter(p => p.reposts?.includes(userId)).length}
+                  </span>
+                </h3>
+                <p className="prof-posts-subtitle">
+                  {activeTab === "posts"
+                    ? "Original stories and updates shared through KalaSetu."
+                    : "Cultural works and announcements curated by this profile."}
+                </p>
+              </div>
+
+              {isOwn && profileUser?.role !== "user" && activeTab === "posts" && (
+                <button className="prof-primary-btn prof-posts-cta" onClick={() => navigate("/create-post")}>
+                  Create Post
+                </button>
+              )}
+            </div>
+
+            {(activeTab === "posts"
+              ? posts.filter(p => p.author?._id === userId).length
+              : posts.filter(p => p.reposts?.includes(userId)).length) === 0 ? (
+              <div className="prof-no-posts">
+                <div className="prof-empty-icon">
+                  <i className={activeTab === "posts" ? "fi fi-sr-image" : "fi fi-sr-arrows-retweet"} />
+                </div>
+                <p>
+                  {activeTab === "posts"
+                    ? (isOwn ? "No posts yet. Share your first cultural story and start building your portfolio." : "No posts yet.")
+                    : (isOwn ? "You haven't reposted anything yet. Share cultural works from others to build your collection." : "No reposts yet.")}
+                </p>
+              </div>
+            ) : (
+              <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto", padding: "10px 0" }}>
+                {posts
+                  .filter(p => activeTab === "posts" ? p.author?._id === userId : p.reposts?.includes(userId))
+                  .map((post) => (
+                    <PostCard
+                      key={post._id}
+                      post={post}
+                      currentUser={currentUser}
+                      isOwn={isOwn && post.author?._id === currentUser?._id}
+                      onLike={handleLike}
+                      onDislike={handleDislike}
+                      onRepost={handleRepost}
+                      onShowLikes={handleLikesClick}
+                      onEdit={() => navigate(`/edit-post/${post._id}`)}
+                      onDelete={() => handleDeletePost(post._id)}
+                    />
+                  ))}
               </div>
             )}
+          </div>
+
+          <aside className="prof-sidebar">
             <div className="prof-card">
-              <h3>Details</h3>
+              <h3>
+                <i className="fi fi-sr-comment-alt-dots" />
+                About
+              </h3>
+              <p>{profile.about || "This member has not added a profile story yet."}</p>
+            </div>
+
+            {skillTags.length > 0 && (
+              <div className="prof-card">
+                <h3>
+                  <i className="fi fi-sr-palette" />
+                  Skills & Focus
+                </h3>
+                <div className="prof-side-tags">
+                  {skillTags.map((skill) => (
+                    <span key={skill} className="prof-skill-pill">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="prof-card">
+              <h3>
+                <i className="fi fi-sr-user" />
+                Details
+              </h3>
               <div className="prof-details">
                 {profile.age && (
                   <div className="prof-detail-row">
@@ -313,92 +602,35 @@ function Profile() {
               </div>
             </div>
 
-            {!isOwn && currentUser && currentUser.role !== "user" && (
-              <button className="prof-full-msg-btn" onClick={() => navigate(`/messages/${userId}`)}>
-                💬 Send a Message
-              </button>
-            )}
-          </div>
-
-          {/* Posts */}
-          <div className="prof-posts-section">
-            <h3 className="prof-posts-title">
-              Cultural Posts <span className="prof-posts-count">{posts.length}</span>
-            </h3>
-            {posts.length === 0 ? (
-              <div className="prof-no-posts">
-                <span>🖼️</span>
-                <p>No posts yet{isOwn ? " — share your first cultural story!" : "."}</p>
-                {isOwn && profileUser?.role !== "user" && (
-                  <button onClick={() => navigate("/create-post")}>Create Post</button>
-                )}
-              </div>
-            ) : (
-              <div className="prof-posts-grid">
-                {posts.map((post) => (
-                  <div key={post._id} className="prof-post-card">
-                    {post.image && <img src={post.image} alt="" className="prof-post-img" />}
-                    <div className="prof-post-body">
-                      <span className="prof-post-cat">{post.category}</span>
-                      <h4>{post.title}</h4>
-                      <p>{post.content}</p>
-                      <div className="prof-post-footer">
-                        <span className="prof-post-date">
-                          {new Date(post.createdAt).toLocaleDateString("en-IN", {
-                            day: "numeric", month: "short", year: "numeric",
-                          })}
-                        </span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <span 
-                            className="prof-post-likes prof-likes-count" 
-                            onClick={(e) => { e.stopPropagation(); handleLikesClick(post._id, post.likes?.length || 0); }}
-                          >
-                            ❤️ {post.likes?.length || 0}
-                          </span>
-                          {isOwn && (
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              <button 
-                                onClick={() => navigate(`/edit-post/${post._id}`)} 
-                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: 0 }}
-                                title="Edit Post"
-                              >
-                                ✏️
-                              </button>
-                              <button 
-                                onClick={() => handleDeletePost(post._id)}
-                                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", padding: 0 }}
-                                title="Delete Post"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            {currentUser && !isOwn && (
+              <div className="prof-card prof-contact-rail">
+                <h3><i className="fi fi-sr-comment-alt-dots" /> Contact</h3>
+                <p>Open a conversation for collaborations, cultural projects, or event opportunities.</p>
+                <button className="prof-primary-btn" onClick={handleMessageClick}>
+                  <i className="fi fi-sr-comment-alt-dots" /> Message
+                </button>
               </div>
             )}
-          </div>
+          </aside>
         </div>
       </div>
 
-      {/* More action modal — Report / Block */}
       {moreModal && (
         <div className="prof-logout-overlay" onClick={() => setMoreModal(null)}>
-          <div className="prof-more-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="prof-more-modal-icon">
-              {moreModal === "block" ? "🚫" : "🚨"}
+          <div className="prof-more-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="prof-empty-icon modal-icon">
+              <i className="fi fi-sr-user" />
             </div>
-            <h3>{moreModal === "block" ? "Block User" : "Report User"}</h3>
+            <h3 className="display-serif">{moreModal === "block" ? "Block User" : "Report User"}</h3>
             <p>
               {moreModal === "block"
-                ? "They won't be able to find your profile or send you messages."
-                : "We'll review this account and take action if it violates our community guidelines."}
+                ? "They will not be able to find your profile or send you messages."
+                : "We will review this account and take action if it violates community guidelines."}
             </p>
             <div className="prof-logout-actions">
-              <button className="prof-logout-cancel" onClick={() => setMoreModal(null)}>Cancel</button>
+              <button className="prof-secondary-btn" onClick={() => setMoreModal(null)}>
+                Cancel
+              </button>
               <button
                 className={moreModal === "block" ? "prof-block-confirm" : "prof-report-confirm"}
                 onClick={confirmMoreAction}
@@ -410,41 +642,37 @@ function Profile() {
         </div>
       )}
 
-      {/* Action toast */}
       {moreToast && <div className="prof-register-toast">{moreToast}</div>}
 
-      {showLogoutModal && (
-        <div className="prof-logout-overlay">
-          <div className="prof-logout-modal">
-            <h3>Logout</h3>
-            <p>Are you sure you want to log out?</p>
-            <div className="prof-logout-actions">
-              <button className="prof-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-              <button className="prof-logout-confirm" onClick={handleLogout}>Logout</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Likes Modal */}
       {likesModalPostId && (
         <div className="prof-logout-overlay" onClick={() => setLikesModalPostId(null)}>
-          <div className="prof-more-modal prof-likes-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="prof-more-modal prof-likes-modal" onClick={(event) => event.stopPropagation()}>
             <div className="prof-likes-header">
-              <h3 style={{margin:0, fontSize:'18px'}}>Likes</h3>
-              <button onClick={() => setLikesModalPostId(null)}>✕</button>
+              <h3 className="display-serif">Likes</h3>
+              <button onClick={() => setLikesModalPostId(null)}>Close</button>
             </div>
             <div className="prof-likes-body">
-              {loadingLikes ? <div className="prof-spinner" style={{margin:'20px auto'}}></div> : (
+              {loadingLikes ? (
+                <div className="prof-likes-loading">
+                  <div className="prof-spinner" />
+                </div>
+              ) : (
                 <div className="prof-likers-list">
-                  {likers.map(u => (
-                     <div key={u._id} className="prof-liker-item" onClick={() => { setLikesModalPostId(null); navigate(`/profile/${u._id}`); }}>
-                        <div className="prof-liker-avatar">{u.username?.[0]?.toUpperCase()}</div>
-                        <div className="prof-liker-info">
-                          <span className="prof-liker-username">{u.username}</span>
-                          <span className="prof-liker-name">{u.fullName}</span>
-                        </div>
-                     </div>
+                  {likers.map((user) => (
+                    <div
+                      key={user._id}
+                      className="prof-liker-item"
+                      onClick={() => {
+                        setLikesModalPostId(null);
+                        navigate(`/profile/${user._id}`);
+                      }}
+                    >
+                      <div className="prof-liker-avatar">{user.username?.[0]?.toUpperCase()}</div>
+                      <div className="prof-liker-info">
+                        <span className="prof-liker-username">{user.username}</span>
+                        <span className="prof-liker-name">{user.fullName}</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -452,7 +680,6 @@ function Profile() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

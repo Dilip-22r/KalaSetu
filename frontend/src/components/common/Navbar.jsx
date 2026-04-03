@@ -20,6 +20,7 @@ function Navbar() {
   const page = useNotificationStore((state) => state.page);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const dropdownRef = useRef(null);
   const profileRef = useRef(null);
@@ -73,9 +74,15 @@ function Navbar() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+    setShowProfileMenu(false);
+  };
+
+  const confirmLogout = () => {
     localStorage.clear();
     setAuthUser(null);
+    setShowLogoutConfirm(false);
     navigate("/");
   };
 
@@ -107,7 +114,8 @@ function Navbar() {
   }
 
   return (
-    <nav className="g-navbar">
+    <>
+      <nav className="g-navbar">
       <div className="g-brand" onClick={() => navigate("/home")}>
         <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
         <div className="g-brand-copy">
@@ -210,7 +218,7 @@ function Navbar() {
                   <i className="fi fi-sr-user" /> View Profile
                 </div>
                 <div className="g-profile-menu-divider" />
-                <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogout}>
+                <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
                   <i className="fi fi-sr-sign-out-alt" /> Logout
                 </div>
               </div>
@@ -219,6 +227,27 @@ function Navbar() {
         </div>
       </div>
     </nav>
+      
+      {showLogoutConfirm && (
+        <div className="g-modal-overlay nav-modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="g-modal-content nav-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="g-modal-icon">
+              <i className="fi fi-sr-sign-out-alt" />
+            </div>
+            <h3 className="display-serif">Sign out of KalaSetu?</h3>
+            <p>You will need to sign back in to access your account.</p>
+            <div className="nav-modal-actions">
+              <button className="g-modal-cancel" onClick={() => setShowLogoutConfirm(false)}>
+                Cancel
+              </button>
+              <button className="g-modal-confirm" onClick={confirmLogout}>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

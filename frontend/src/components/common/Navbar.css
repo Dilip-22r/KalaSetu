@@ -403,3 +403,85 @@
     right: -12px;
   }
 }
+
+/* ── Logout Modal ────────────────────────────────────────────── */
+.nav-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 26, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.nav-modal-content {
+  width: min(400px, calc(100vw - 32px));
+  background: var(--surface-card);
+  padding: 32px 28px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lifted);
+  text-align: center;
+  border: 1px solid var(--line-soft);
+  animation: slideDownNav 0.2s ease-out;
+}
+
+.nav-modal-content .g-modal-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.nav-modal-content h3 {
+  font-size: 20px;
+  color: var(--text-strong);
+  margin-bottom: 8px;
+}
+
+.nav-modal-content p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.nav-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.g-modal-cancel,
+.g-modal-confirm {
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.g-modal-cancel {
+  background: rgba(47, 111, 109, 0.08);
+  color: var(--brand-900);
+}
+.g-modal-cancel:hover {
+  background: rgba(47, 111, 109, 0.15);
+}
+
+.g-modal-confirm {
+  background: #c0392b;
+  color: #fff;
+}
+.g-modal-confirm:hover {
+  background: #a93226;
+}

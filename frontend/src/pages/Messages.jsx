@@ -65,6 +65,7 @@ function Messages() {
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const initialLoadRef = useRef(true);
 
   const showNotification = useCallback((message) => {
     setNotification({ text: message });
@@ -78,7 +79,10 @@ function Messages() {
       return;
     }
 
-    setLoadingConvs(true);
+    if (initialLoadRef.current) {
+      setLoadingConvs(true);
+      initialLoadRef.current = false;
+    }
     try {
       const res = await axios.get(`${API}/messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` },

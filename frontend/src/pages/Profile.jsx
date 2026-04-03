@@ -70,6 +70,7 @@ function Profile() {
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [activeTab, setActiveTab] = useState("posts");
 
   const isOwn = currentUser && currentUser._id === userId;
 
@@ -218,7 +219,8 @@ function Profile() {
 
       try {
         const postsRes = await axios.get(`${API}/posts`);
-        setPosts(postsRes.data.filter((post) => post.author?._id === userId));
+        const allPosts = postsRes.data;
+        setPosts(allPosts);
       } catch (err) {
         setPosts([]);
         console.error("Error fetching user posts:", err);
@@ -468,50 +470,78 @@ function Profile() {
 
         <div className="prof-body">
           <div className="prof-posts-section">
+            <div className="prof-tabs">
+              <button
+                className={`prof-tab ${activeTab === "posts" ? "active" : ""}`}
+                onClick={() => setActiveTab("posts")}
+              >
+                <i className="fi fi-sr-apps" />
+                Posts
+              </button>
+              <button
+                className={`prof-tab ${activeTab === "reposts" ? "active" : ""}`}
+                onClick={() => setActiveTab("reposts")}
+              >
+                <i className="fi fi-sr-arrows-retweet" />
+                Reposts
+              </button>
+            </div>
+
             <div className="prof-posts-header">
               <div>
                 <h3 className="prof-posts-title">
-                  Cultural Posts <span className="prof-posts-count">{posts.length}</span>
+                  {activeTab === "posts" ? "Cultural Posts" : "Shared Stories"}
+                  <span className="prof-posts-count">
+                    {activeTab === "posts"
+                      ? posts.filter(p => p.author?._id === userId).length
+                      : posts.filter(p => p.reposts?.includes(userId)).length}
+                  </span>
                 </h3>
                 <p className="prof-posts-subtitle">
-                  Stories, updates, and cultural work shared through KalaSetu.
+                  {activeTab === "posts"
+                    ? "Original stories and updates shared through KalaSetu."
+                    : "Cultural works and announcements curated by this profile."}
                 </p>
               </div>
 
-              {isOwn && profileUser?.role !== "user" && (
+              {isOwn && profileUser?.role !== "user" && activeTab === "posts" && (
                 <button className="prof-primary-btn prof-posts-cta" onClick={() => navigate("/create-post")}>
                   Create Post
                 </button>
               )}
             </div>
 
-            {posts.length === 0 ? (
+            {(activeTab === "posts"
+              ? posts.filter(p => p.author?._id === userId).length
+              : posts.filter(p => p.reposts?.includes(userId)).length) === 0 ? (
               <div className="prof-no-posts">
                 <div className="prof-empty-icon">
-                  <i className="fi fi-sr-image" />
+                  <i className={activeTab === "posts" ? "fi fi-sr-image" : "fi fi-sr-arrows-retweet"} />
                 </div>
                 <p>
-                  No posts yet
-                  {isOwn ? ". Share your first cultural story and start building your portfolio." : "."}
+                  {activeTab === "posts"
+                    ? (isOwn ? "No posts yet. Share your first cultural story and start building your portfolio." : "No posts yet.")
+                    : (isOwn ? "You haven't reposted anything yet. Share cultural works from others to build your collection." : "No reposts yet.")}
                 </p>
               </div>
             ) : (
               <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto", padding: "10px 0" }}>
-                {posts.map((post) => (
-                  <PostCard
-                    key={post._id}
-                    post={post}
-                    currentUser={currentUser}
-                    isOwn={isOwn}
-                    hideRepost={true}
-                    onLike={handleLike}
-                    onDislike={handleDislike}
-                    onRepost={handleRepost}
-                    onShowLikes={handleLikesClick}
-                    onEdit={() => navigate(`/edit-post/${post._id}`)}
-                    onDelete={() => handleDeletePost(post._id)}
-                  />
-                ))}
+                {posts
+                  .filter(p => activeTab === "posts" ? p.author?._id === userId : p.reposts?.includes(userId))
+                  .map((post) => (
+                    <PostCard
+                      key={post._id}
+                      post={post}
+                      currentUser={currentUser}
+                      isOwn={isOwn && post.author?._id === currentUser?._id}
+                      onLike={handleLike}
+                      onDislike={handleDislike}
+                      onRepost={handleRepost}
+                      onShowLikes={handleLikesClick}
+                      onEdit={() => navigate(`/edit-post/${post._id}`)}
+                      onDelete={() => handleDeletePost(post._id)}
+                    />
+                  ))}
               </div>
             )}
           </div>

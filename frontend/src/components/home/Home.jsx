@@ -173,7 +173,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
           </button>
 
           {/* Repost — LinkedIn-style dropdown */}
-          {!hideRepost && (
+          {!hideRepost && post.author?._id !== currentUser?._id && (
             <div className="post-action-wrap" ref={repostRef}>
               <button
                 className={`post-action-btn repost ${reposted ? "active" : ""}`}

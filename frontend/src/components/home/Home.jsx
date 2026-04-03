@@ -24,7 +24,7 @@ const categoryIcons = {
   announcement: "fi fi-sr-megaphone",
 };
 
-function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes }) {
+export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes, onEdit, onDelete, isOwn, hideRepost }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const disliked = post.dislikes?.includes(currentUser?._id);
@@ -173,25 +173,27 @@ function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes 
           </button>
 
           {/* Repost — LinkedIn-style dropdown */}
-          <div className="post-action-wrap" ref={repostRef}>
-            <button
-              className={`post-action-btn repost ${reposted ? "active" : ""}`}
-              onClick={() => currentUser && setShowRepostMenu((v) => !v)}
-              disabled={!currentUser}
-              title="Repost"
-            >
-              <i className="fi fi-sr-arrows-retweet" />
-              {post.reposts?.length > 0 && <span className="action-count">{post.reposts.length}</span>}
-            </button>
-            {showRepostMenu && (
-              <div className="post-repost-menu">
-                <button onClick={() => { onRepost(post._id); setShowRepostMenu(false); }}>
-                  <i className="fi fi-sr-arrows-retweet" />
-                  {reposted ? "Undo repost" : "Repost"}
-                </button>
-              </div>
-            )}
-          </div>
+          {!hideRepost && (
+            <div className="post-action-wrap" ref={repostRef}>
+              <button
+                className={`post-action-btn repost ${reposted ? "active" : ""}`}
+                onClick={() => currentUser && setShowRepostMenu((v) => !v)}
+                disabled={!currentUser}
+                title="Repost"
+              >
+                <i className="fi fi-sr-arrows-retweet" />
+                {post.reposts?.length > 0 && <span className="action-count">{post.reposts.length}</span>}
+              </button>
+              {showRepostMenu && (
+                <div className="post-repost-menu">
+                  <button onClick={() => { onRepost(post._id); setShowRepostMenu(false); }}>
+                    <i className="fi fi-sr-arrows-retweet" />
+                    {reposted ? "Undo repost" : "Repost"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Share — LinkedIn-style dropdown */}
           <div className="post-action-wrap">
@@ -216,6 +218,16 @@ function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes 
               </div>
             )}
           </div>
+          {isOwn && onEdit && (
+            <button className="post-action-btn edit" onClick={() => onEdit()} title="Edit">
+              <i className="fi fi-sr-pencil" />
+            </button>
+          )}
+          {isOwn && onDelete && (
+            <button className="post-action-btn delete" onClick={() => onDelete()} title="Delete" style={{color: "var(--home-accent)"}}>
+              <i className="fi fi-sr-trash" />
+            </button>
+          )}
         </div>
 
         {/* Comments panel */}

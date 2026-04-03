@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/common/Navbar";
 import "./Profile.css";
+import { PostCard } from "../components/home/Home";
+import "../components/home/Home.css";
 
 const API = "http://localhost:5000";
 
@@ -152,6 +154,56 @@ function Profile() {
     setLoadingLikes(false);
   };
 
+  const handleLike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(
+      posts.map((post) => {
+        if (post._id !== postId) return post;
+        const isLiked = post.likes.includes(currentUser._id);
+        const updatedLikes = isLiked
+          ? post.likes.filter((id) => id !== currentUser._id)
+          : [...post.likes, currentUser._id];
+        return { ...post, likes: updatedLikes };
+      })
+    );
+    try {
+      await axios.put(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleDislike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isDisliked = post.dislikes?.includes(currentUser._id);
+      const updatedDislikes = isDisliked
+        ? (post.dislikes || []).filter((id) => id !== currentUser._id)
+        : [...(post.dislikes || []), currentUser._id];
+      return { ...post, dislikes: updatedDislikes };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleRepost = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isReposted = post.reposts?.includes(currentUser._id);
+      const updatedReposts = isReposted
+        ? (post.reposts || []).filter((id) => id !== currentUser._id)
+        : [...(post.reposts || []), currentUser._id];
+      return { ...post, reposts: updatedReposts };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
   useEffect(() => {
     const loadProfileData = async () => {
       try {
@@ -277,10 +329,10 @@ function Profile() {
   const roleLabel = getRoleLabel(profileUser?.role);
   const joinDate = profileUser?.createdAt
     ? new Date(profileUser.createdAt).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
     : "Unknown";
   const displayName = profile.displayName || profileUser?.fullName || profileUser?.username;
   const skillTags = getSkillTags(profile.skills);
@@ -304,7 +356,6 @@ function Profile() {
           <div className="prof-cover">
             <div className="prof-cover-content">
               <span className="prof-cover-kicker">KalaSetu Portfolio</span>
-              <p>{profileStoryline}</p>
             </div>
           </div>
 
@@ -325,46 +376,29 @@ function Profile() {
                 <span className={`prof-role-badge ${profileUser?.role}`}>{roleLabel}</span>
               </div>
               <p className="prof-username">@{profileUser?.username}</p>
-              <p className="prof-tagline">{profileTagline}</p>
 
-              <div className="prof-meta-row">
-                {profileRegion && (
-                  <span>
-                    <i className="fi fi-sr-map-marker" />
-                    Region {profileRegion}
-                  </span>
-                )}
+              <div className="prof-meta-row" style={{ marginTop: '10px' }}>
                 {profile.location && (
                   <span>
-                    <i className="fi fi-sr-map-marker" />
+                    <i className="fi fi-sr-map-marker" style={{ color: '#d1437b' }} />
                     {profile.location}
                   </span>
                 )}
-                {profile.userType && (
+                {skillTags.length > 0 && (
                   <span>
-                    <i className="fi fi-sr-palette" />
-                    {profile.userType}
+                    <i className="fi fi-sr-palette" style={{ color: '#C4704A' }} />
+                    {skillTags[0]}
                   </span>
                 )}
                 <span>
-                  <i className="fi fi-sr-calendar" />
+                  <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
                   Joined {joinDate}
                 </span>
               </div>
 
-              {skillTags.length > 0 && (
-                <div className="prof-skill-tags">
-                  {skillTags.map((skill) => (
-                    <span key={skill} className="prof-skill-pill">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               <div className="prof-stats-row">
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-image" /></span>
+                  <span className="prof-stat-icon"><i className="fi fi-sr-apps" /></span>
                   <strong>{posts.length}</strong>
                   <small>Posts</small>
                 </div>
@@ -462,73 +496,21 @@ function Profile() {
                 </p>
               </div>
             ) : (
-              <div className="prof-posts-grid">
+              <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto", padding: "10px 0" }}>
                 {posts.map((post) => (
-                  <article key={post._id} className="prof-post-card">
-                    <div className="prof-post-media">
-                      {post.image ? (
-                        <img src={post.image} alt={post.title} className="prof-post-img" />
-                      ) : (
-                        <div className="prof-post-placeholder">
-                          <i className="fi fi-sr-image" />
-                        </div>
-                      )}
-                      <div className="prof-post-overlay">
-                        <span className="prof-post-cat">{post.category}</span>
-                      </div>
-                    </div>
-
-                    <div className="prof-post-body">
-                      <span className="prof-post-date">
-                        <i className="fi fi-sr-calendar" />
-                        {new Date(post.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <div className="prof-post-tags">
-                        <span className="prof-post-tag">#{post.category}</span>
-                        {skillTags.slice(0, 2).map((skill) => (
-                          <span key={`${post._id}-${skill}`} className="prof-post-tag muted">
-                            #{skill.replace(/\s+/g, "")}
-                          </span>
-                        ))}
-                      </div>
-                      <h4>{post.title}</h4>
-                      <p>{post.content}</p>
-
-                      <div className="prof-post-footer">
-                        <button
-                          className="prof-like-pill"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleLikesClick(post._id, post.likes?.length || 0);
-                          }}
-                        >
-                          <i className="fi fi-sr-heart" />
-                          {post.likes?.length || 0}
-                        </button>
-
-                        {isOwn && (
-                          <div className="prof-post-actions">
-                            <button
-                              className="prof-post-action"
-                              onClick={() => navigate(`/edit-post/${post._id}`)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="prof-post-action danger"
-                              onClick={() => handleDeletePost(post._id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </article>
+                  <PostCard
+                    key={post._id}
+                    post={post}
+                    currentUser={currentUser}
+                    isOwn={isOwn}
+                    hideRepost={true}
+                    onLike={handleLike}
+                    onDislike={handleDislike}
+                    onRepost={handleRepost}
+                    onShowLikes={handleLikesClick}
+                    onEdit={() => navigate(`/edit-post/${post._id}`)}
+                    onDelete={() => handleDeletePost(post._id)}
+                  />
                 ))}
               </div>
             )}

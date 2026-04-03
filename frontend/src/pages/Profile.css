@@ -86,7 +86,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 22px;
-  align-items: end;
+  align-items: start;
   padding: 0 34px 30px;
   margin-top: -52px;
   position: relative;
@@ -101,7 +101,7 @@
 .prof-avatar-initials {
   width: 116px;
   height: 116px;
-  border-radius: 32px;
+  border-radius: 50%;
   border: 5px solid rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 34px rgba(43, 43, 43, 0.16);
 }
@@ -222,24 +222,24 @@
 .prof-stats-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .prof-stat-card {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 16px 18px;
-  border-radius: 20px;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 243, 237, 0.86));
   border: 1px solid rgba(47, 111, 109, 0.08);
-  box-shadow: 0 8px 22px rgba(43, 43, 43, 0.06);
+  box-shadow: 0 6px 16px rgba(43, 43, 43, 0.05);
 }
 
 .prof-stat-icon {
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -250,7 +250,7 @@
 }
 
 .prof-stat-card strong {
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
   color: var(--text-strong);
 }

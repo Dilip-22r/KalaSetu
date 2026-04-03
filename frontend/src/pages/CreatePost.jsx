@@ -115,7 +115,7 @@ function CreatePost() {
                 </div>
               </div>
               <button type="button" className="cp-submit" onClick={handleNext}>
-                Next → Content
+                Next
               </button>
             </div>
           )}

@@ -59,6 +59,15 @@
   gap: 12px;
 }
 
+.g-profile-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(47, 111, 109, 0.2);
+}
+
 .g-nav-main {
   justify-content: center;
   flex: 1;

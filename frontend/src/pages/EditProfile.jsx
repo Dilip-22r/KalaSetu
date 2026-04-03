@@ -29,8 +29,11 @@ function EditProfile() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm();
+
+  const selectedRole = watch("userType");
 
   useEffect(() => {
     if (!currentUser || currentUser.role === "user") {
@@ -49,6 +52,10 @@ function EditProfile() {
         setValue("location", profile.location || "");
         setValue("about", profile.about || "");
         setValue("userType", profile.userType || (currentUser.role === "artisan" ? "Artisan" : "NGO"));
+        setValue("organizationName", profile.organizationName || "");
+        setValue("organizationId", profile.organizationId || "");
+        setValue("verificationDocument", profile.verificationDocument || "");
+        setValue("isPrivate", profile.isPrivate || false);
         if (profile.photo) setPreviewPhoto(profile.photo);
       } catch {
         // No profile yet, fall back to defaults.
@@ -139,6 +146,10 @@ function EditProfile() {
           about: data.about,
           photo: previewPhoto,
           userType: data.userType,
+          organizationName: data.organizationName,
+          organizationId: data.organizationId,
+          verificationDocument: data.verificationDocument,
+          isPrivate: data.isPrivate,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -202,37 +213,90 @@ function EditProfile() {
               </div>
             </div>
 
-            <div className="ep-row">
-              <div className="ep-field">
-                <label>Display Name *</label>
-                <input type="text" {...register("name", { required: "Name is required" })} />
-                {errors.name && <small>{errors.name.message}</small>}
-              </div>
-              <div className="ep-field">
-                <label>Age *</label>
-                <input
-                  type="number"
-                  {...register("age", {
-                    required: "Age is required",
-                    min: { value: 12, message: "Must be at least 12" },
-                  })}
-                />
-                {errors.age && <small>{errors.age.message}</small>}
-              </div>
-            </div>
+            {selectedRole === "NGO" ? (
+              <>
+                <div className="ep-row">
+                  <div className="ep-field">
+                    <label>Organization Name *</label>
+                    <input type="text" {...register("organizationName", { required: "Name is required" })} />
+                    {errors.organizationName && <small>{errors.organizationName.message}</small>}
+                  </div>
+                  <div className="ep-field">
+                    <label>Organization ID *</label>
+                    <input type="text" {...register("organizationId", { required: "ID is required" })} />
+                    {errors.organizationId && <small>{errors.organizationId.message}</small>}
+                  </div>
+                </div>
+
+                <div className="ep-field">
+                  <label>Verification Document (PDF) *</label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    id="ngoDocUploadEp"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setValue("verificationDocument", reader.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    <label htmlFor="ngoDocUploadEp" className="ep-upload-btn" style={{ padding: "8px 12px", fontSize: "13px" }}>
+                      Browse Files
+                    </label>
+                    {watch("verificationDocument") && <span style={{fontSize: "13px", color: "var(--brand-700)", fontWeight: "600"}}>Document attached</span>}
+                  </div>
+                  <input type="hidden" {...register("verificationDocument", { required: "Document is required" })} />
+                  {errors.verificationDocument && <small>{errors.verificationDocument.message}</small>}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ep-row">
+                  <div className="ep-field">
+                    <label>Display Name *</label>
+                    <input type="text" {...register("name", { required: "Name is required" })} />
+                    {errors.name && <small>{errors.name.message}</small>}
+                  </div>
+                  <div className="ep-field">
+                    <label>Age *</label>
+                    <input
+                      type="number"
+                      {...register("age", {
+                        required: "Age is required",
+                        min: { value: 12, message: "Must be at least 12" },
+                      })}
+                    />
+                    {errors.age && <small>{errors.age.message}</small>}
+                  </div>
+                </div>
+
+                <div className="ep-row">
+                  <div className="ep-field">
+                    <label>Gender *</label>
+                    <select {...register("gender", { required: "Gender is required" })}>
+                      <option value="">Select gender</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                      <option>Prefer not to say</option>
+                    </select>
+                    {errors.gender && <small>{errors.gender.message}</small>}
+                  </div>
+                  <div className="ep-field">
+                    <label>Skills / Art Form *</label>
+                    <input type="text" {...register("skills", { required: "Skills are required" })} />
+                    {errors.skills && <small>{errors.skills.message}</small>}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="ep-row">
-              <div className="ep-field">
-                <label>Gender *</label>
-                <select {...register("gender", { required: "Gender is required" })}>
-                  <option value="">Select gender</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                  <option>Prefer not to say</option>
-                </select>
-                {errors.gender && <small>{errors.gender.message}</small>}
-              </div>
               <div className="ep-field">
                 <label>User Type *</label>
                 <select {...register("userType", { required: "Please select a type" })}>
@@ -242,24 +306,25 @@ function EditProfile() {
                 </select>
                 {errors.userType && <small>{errors.userType.message}</small>}
               </div>
+
+              <div className="ep-field">
+                <label>Location *</label>
+                <input type="text" {...register("location", { required: "Location is required" })} />
+                {errors.location && <small>{errors.location.message}</small>}
+              </div>
             </div>
 
             <div className="ep-field">
-              <label>Skills / Art Form *</label>
-              <input type="text" {...register("skills", { required: "Skills are required" })} />
-              {errors.skills && <small>{errors.skills.message}</small>}
-            </div>
-
-            <div className="ep-field">
-              <label>Location *</label>
-              <input type="text" {...register("location", { required: "Location is required" })} />
-              {errors.location && <small>{errors.location.message}</small>}
-            </div>
-
-            <div className="ep-field">
-              <label>About You *</label>
+              <label>About You / Organization *</label>
               <textarea rows={4} {...register("about", { required: "Please write about yourself" })} />
               {errors.about && <small>{errors.about.message}</small>}
+            </div>
+
+            <div className="ep-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "8px" }}>
+              <input type="checkbox" id="privateProfile" style={{ width: "22px", height: "22px" }} {...register("isPrivate")} />
+              <label htmlFor="privateProfile" style={{ cursor: "pointer", fontSize: "14px" }}>
+                Make profile private (only visible to followers)
+              </label>
             </div>
 
             <button type="submit" className="ep-submit" disabled={loading}>

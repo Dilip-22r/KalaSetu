@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../store/useNotificationStore";
+import axios from "axios";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./Navbar.css";
 
@@ -34,6 +35,17 @@ function Navbar() {
       setAuthUser(storedUser);
     }
   }, [authUser, setAuthUser, storedUser]);
+
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  
+  useEffect(() => {
+    if (!effectiveUser?._id) return;
+    axios.get(`http://localhost:5000/profiles/${effectiveUser._id}`)
+      .then(res => {
+         if (res.data?.photo) setProfilePhoto(res.data.photo);
+      })
+      .catch(() => {}); // silently fail if no profile yet
+  }, [effectiveUser?._id]);
 
   const initializeNotifications = useCallback(() => {
     fetchNotifications(1);
@@ -151,6 +163,15 @@ function Navbar() {
         </div>
 
         <div className="g-nav-actions">
+          {effectiveUser.role === "user" && (
+            <button 
+              className="g-primary-btn" 
+              onClick={() => navigate("/register")}
+              style={{ fontSize: '13px', padding: '8px 16px', marginRight: '8px' }}
+            >
+              Register as Artisan / NGO
+            </button>
+          )}
           <div className="g-notif-wrapper" ref={dropdownRef}>
             <button className="g-alert-btn" onClick={handleBellClick}>
               <i className="fi fi-sr-bell" />
@@ -207,7 +228,11 @@ function Navbar() {
               className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
               onClick={() => setShowProfileMenu((v) => !v)}
             >
-              <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" className="g-profile-avatar-img" />
+              ) : (
+                <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+              )}
               <span className="g-profile-copy">
                 <strong>{effectiveUser.username}</strong>
               </span>

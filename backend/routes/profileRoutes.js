@@ -83,7 +83,7 @@ router.get("/:userId", async (req, res) => {
 // CREATE or UPDATE profile
 router.post("/", requireAuth, async (req, res) => {
   try {
-    const { displayName, age, gender, skills, location, about, photo, userType } = req.body;
+    const { displayName, age, gender, skills, location, about, photo, userType, organizationName, verificationDocument, organizationId, isPrivate } = req.body;
     let profile = await Profile.findOne({ user: req.user.id });
 
     // Only update fields that were explicitly sent (allows partial updates like photo removal)
@@ -96,6 +96,10 @@ router.post("/", requireAuth, async (req, res) => {
     if (about !== undefined) updates.about = about;
     if (photo !== undefined) updates.photo = photo;
     if (userType !== undefined) updates.userType = userType;
+    if (organizationName !== undefined) updates.organizationName = organizationName;
+    if (verificationDocument !== undefined) updates.verificationDocument = verificationDocument;
+    if (organizationId !== undefined) updates.organizationId = organizationId;
+    if (isPrivate !== undefined) updates.isPrivate = isPrivate;
 
     if (profile) {
       Object.assign(profile, updates);

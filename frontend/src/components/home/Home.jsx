@@ -90,12 +90,12 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
     const token = localStorage.getItem("token");
     const postUrl = `${window.location.origin}/post/${post._id}`;
     const text = shareNote.trim()
-      ? `${shareNote}\n\n${postUrl}`
+      ? shareNote.trim()
       : `Check out this post: ${postUrl}`;
     try {
       await axios.post(
         `${API}/messages`,
-        { receiver: recipientId, text },
+        { receiverId: recipientId, text, sharedPostId: post._id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSentTo((prev) => [...prev, recipientId]);

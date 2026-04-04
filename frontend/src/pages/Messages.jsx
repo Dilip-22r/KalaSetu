@@ -54,6 +54,9 @@ function Messages() {
   const [notification, setNotification] = useState(null);
   // local unread count map: { [partnerId]: number } — updated in real time
   const [unreadMap, setUnreadMap] = useState({});
+  // messaging permission
+  const [messagingAllowed, setMessagingAllowed] = useState(null); // null=loading, true, false
+  const [messagingBlockReason, setMessagingBlockReason] = useState(null);
 
   const { onlineUsers, socket } = useAuthStore();
   const {
@@ -104,11 +107,29 @@ function Messages() {
     setLoadingConvs(false);
   }, [token, user]);
 
+  const checkMessagingPermission = useCallback(async (uid) => {
+    if (!uid || !token) return;
+    setMessagingAllowed(null); // loading
+    try {
+      const res = await axios.get(`${API}/messages/can-message/${uid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessagingAllowed(res.data.canMessage);
+      setMessagingBlockReason(res.data.reason || null);
+    } catch {
+      setMessagingAllowed(true); // fail-open so we don't block on errors
+      setMessagingBlockReason(null);
+    }
+  }, [token]);
+
   const openConversation = useCallback(async (uid) => {
     if (!uid || !token || !user || user.role === "user") return;
 
     // Clear unread badge immediately when opening
     setUnreadMap((prev) => ({ ...prev, [uid]: 0 }));
+    // Reset permission while new chat loads
+    setMessagingAllowed(null);
+    setMessagingBlockReason(null);
 
     navigate(`/messages/${uid}`, { replace: true });
     try {
@@ -127,24 +148,26 @@ function Messages() {
 
       if (conversation) {
         setActiveUser(conversation.partner);
-        return;
-      }
-
-      try {
-        const profileRes = await axios.get(`${API}/profiles/${uid}`);
-        setActiveUser(profileRes.data.user);
-      } catch {
+      } else {
         try {
-          const userRes = await axios.get(`${API}/auth/user/${uid}`);
-          setActiveUser(userRes.data);
+          const profileRes = await axios.get(`${API}/profiles/${uid}`);
+          setActiveUser(profileRes.data.user);
         } catch {
-          setActiveUser(null);
+          try {
+            const userRes = await axios.get(`${API}/auth/user/${uid}`);
+            setActiveUser(userRes.data);
+          } catch {
+            setActiveUser(null);
+          }
         }
       }
     } catch {
       setMessages([]);
     }
-  }, [conversations, navigate, setMessages, socket, token, user]);
+
+    // Check permission after loading messages
+    checkMessagingPermission(uid);
+  }, [checkMessagingPermission, conversations, navigate, setMessages, socket, token, user]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -610,47 +633,61 @@ function Messages() {
                 </div>
               )}
 
-              <form className="msg-input-bar" onSubmit={handleSend}>
-                <label className="msg-media-btn" title="Add Image">
-                  <i className="fi fi-sr-picture" />
+              {/* Input bar — locked or normal, always same height */}
+              {messagingAllowed === false ? (
+                <div className="msg-input-bar msg-input-disabled">
+                  <span className="msg-locked-icon">
+                    <i className="fi fi-sr-lock" />
+                  </span>
+                  <span className="msg-locked-text">
+                    {messagingBlockReason === "pending_request"
+                      ? "You can message this user only after they accept your follow request."
+                      : "Follow this user to send them a message."}
+                  </span>
+                </div>
+              ) : (
+                <form className="msg-input-bar" onSubmit={handleSend}>
+                  <label className="msg-media-btn" title="Add Image">
+                    <i className="fi fi-sr-picture" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          const base64 = reader.result;
+                          try {
+                            const res = await axios.post(
+                              `${API}/messages`,
+                              { receiverId: activeUserId, text: "Shared an image", image: base64 },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            addMessage(res.data);
+                            fetchConversations();
+                          } catch {
+                            showNotification("Failed to send image");
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={async (e) => {
-                      const file = e.target.files[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onloadend = async () => {
-                        const base64 = reader.result;
-                        try {
-                          const res = await axios.post(
-                            `${API}/messages`,
-                            { receiverId: activeUserId, text: "Shared an image", image: base64 },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
-                          addMessage(res.data);
-                          fetchConversations();
-                        } catch {
-                          showNotification("Failed to send image");
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    }}
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Type a message..."
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    className="msg-text-input"
                   />
-                </label>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Type a message..."
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  className="msg-text-input"
-                />
-                <button type="submit" className="msg-send-btn" disabled={sending || !text.trim()}>
-                  <i className="fi fi-sr-comment-alt-dots" /> {sending ? "..." : "Send"}
-                </button>
-              </form>
+                  <button type="submit" className="msg-send-btn" disabled={sending || !text.trim() || messagingAllowed === null}>
+                    <i className="fi fi-sr-comment-alt-dots" /> {sending ? "..." : "Send"}
+                  </button>
+                </form>
+              )}
             </>
           )}
         </div>

@@ -1,6 +1,7 @@
 import express from "express";
 import { Message } from "../models/Message.js";
 import { User } from "../models/User.js";
+import { Profile } from "../models/Profile.js";
 import jwt from "jsonwebtoken";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
@@ -8,6 +9,29 @@ import { Notification } from "../models/Notification.js";
 import { Post } from "../models/Post.js";
 
 const router = express.Router();
+
+// Helper: check if sender can message receiver
+async function canSendMessage(senderId, receiverId) {
+  if (String(senderId) === String(receiverId)) return { allowed: false, reason: "self" };
+
+  const receiverProfile = await Profile.findOne({ user: receiverId }).lean();
+  // Public account — anyone can message
+  if (!receiverProfile || !receiverProfile.isPrivate) return { allowed: true };
+
+  // Private account — sender must be an approved follower
+  const receiver = await User.findById(receiverId).select("followers followRequests").lean();
+  if (!receiver) return { allowed: false, reason: "not_found" };
+
+  const isFollower = receiver.followers.some(
+    (f) => f.toString() === String(senderId)
+  );
+  if (isFollower) return { allowed: true };
+
+  const isPending = receiver.followRequests.some(
+    (r) => r.toString() === String(senderId)
+  );
+  return { allowed: false, reason: isPending ? "pending_request" : "not_following" };
+}
 
 // GET conversations
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
@@ -149,10 +173,31 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
   }
 });
 
+// CHECK if current user can message another user
+router.get("/can-message/:userId", requireAuth, async (req, res) => {
+  try {
+    const result = await canSendMessage(req.user.id, req.params.userId);
+    if (result.allowed) return res.json({ canMessage: true });
+    return res.json({ canMessage: false, reason: result.reason });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // SEND message
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {
     const { receiverId, text, replyTo, sharedPostId, image } = req.body;
+
+    // Permission guard
+    const permission = await canSendMessage(req.user.id, receiverId);
+    if (!permission.allowed) {
+      return res.status(403).json({
+        message: "messaging_not_allowed",
+        reason: permission.reason,
+      });
+    }
+
     const receiverSocketId = getReceiverSocketId(receiverId);
     const initialStatus = receiverSocketId ? "delivered" : "sent";
 

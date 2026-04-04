@@ -788,6 +788,38 @@
   cursor: not-allowed;
 }
 
+/* ─── Locked / permission-blocked input bar ─────────────────────────── */
+.msg-input-disabled {
+  align-items: center;
+  gap: 14px;
+  background: rgba(247, 243, 237, 0.72);
+  border-top: 1.5px dashed rgba(47, 111, 109, 0.18);
+  cursor: not-allowed;
+  min-height: 72px; /* same as normal bar */
+}
+
+.msg-locked-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(47, 111, 109, 0.1);
+  color: var(--brand-700);
+  font-size: 15px;
+}
+
+.msg-locked-text {
+  flex: 1;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+
 .msg-locked {
   max-width: 500px;
   margin: 90px auto;

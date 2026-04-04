@@ -65,6 +65,7 @@ function Messages() {
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const initialLoadRef = useRef(true);
 
   const showNotification = useCallback((message) => {
     setNotification({ text: message });
@@ -78,7 +79,10 @@ function Messages() {
       return;
     }
 
-    setLoadingConvs(true);
+    if (initialLoadRef.current) {
+      setLoadingConvs(true);
+      initialLoadRef.current = false;
+    }
     try {
       const res = await axios.get(`${API}/messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -410,9 +414,13 @@ function Messages() {
                       <div className="msg-conv-last">
                         {conv.lastMessage?.deleted
                           ? "Message deleted"
-                          : conv.lastMessage?.text
-                            ? conv.lastMessage.text.slice(0, 34) + (conv.lastMessage.text.length > 34 ? "..." : "")
-                            : "No messages yet"}
+                          : conv.lastMessage?.sharedPost
+                            ? (conv.lastMessage.sender === user._id || conv.lastMessage.sender?._id === user._id ? "You shared a post" : "Shared a post")
+                            : conv.lastMessage?.image
+                              ? (conv.lastMessage.sender === user._id || conv.lastMessage.sender?._id === user._id ? "You sent an image" : "Sent an image")
+                              : conv.lastMessage?.text
+                              ? conv.lastMessage.text.slice(0, 34) + (conv.lastMessage.text.length > 34 ? "..." : "")
+                              : "No messages yet"}
                       </div>
                     </div>
                     <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
@@ -498,7 +506,41 @@ function Messages() {
                                   <span className="msg-reply-text">{msg.replyTo.text?.slice(0, 60)}</span>
                                 </div>
                               )}
-                              <p>{isDeleted ? "This message was deleted" : msg.text}</p>
+                              {msg.sharedPost && !isDeleted && (
+                                <div className="msg-shared-post" onClick={() => navigate(`/profile/${msg.sharedPost.author?._id}`)}>
+                                  <div className="msg-shared-author">
+                                    <div className="msg-shared-avatar-wrap">
+                                      {msg.sharedPost.author?.photo ? (
+                                        <img src={msg.sharedPost.author.photo} alt="" className="msg-shared-avatar-img" />
+                                      ) : (
+                                        msg.sharedPost.author?.username?.[0]?.toUpperCase()
+                                      )}
+                                    </div>
+                                    <div className="msg-shared-author-info">
+                                      <div className="msg-shared-name">{msg.sharedPost.author?.fullName}</div>
+                                      <div className="msg-shared-role">{msg.sharedPost.author?.role}</div>
+                                    </div>
+                                  </div>
+                                  {msg.sharedPost.image && (
+                                    <div className="msg-shared-img">
+                                      <img src={msg.sharedPost.image} alt="" />
+                                    </div>
+                                  )}
+                                  <div className="msg-shared-content">
+                                    <div className="msg-shared-title">{msg.sharedPost.title}</div>
+                                    <div className="msg-shared-desc">{msg.sharedPost.description?.slice(0, 80)}...</div>
+                                  </div>
+                                </div>
+                              )}
+                              {msg.image && !isDeleted && (
+                                <div className="msg-bubble-media">
+                                  <img src={msg.image} alt="" />
+                                </div>
+                              )}
+                              {(!msg.sharedPost || !msg.text.startsWith("Check out this post:")) &&
+                               (!msg.image || msg.text !== "Shared an image") && (
+                                <p>{isDeleted ? "This message was deleted" : msg.text}</p>
+                              )}
                               <div className="msg-bubble-footer">
                                 <span className="msg-time">{formatTime(msg.createdAt)}</span>
                                 {isMine && !isDeleted && <MessageTick status={msg.status} />}
@@ -546,6 +588,34 @@ function Messages() {
               )}
 
               <form className="msg-input-bar" onSubmit={handleSend}>
+                <label className="msg-media-btn" title="Add Image">
+                  <i className="fi fi-sr-picture" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = async () => {
+                        const base64 = reader.result;
+                        try {
+                          const res = await axios.post(
+                            `${API}/messages`,
+                            { receiverId: activeUserId, text: "Shared an image", image: base64 },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          setMessages([...messages, res.data]);
+                          fetchConversations();
+                        } catch {
+                          showNotification("Failed to send image");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
                 <input
                   ref={inputRef}
                   type="text"

@@ -3,6 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/common/Navbar";
 import "./Profile.css";
+import { PostCard } from "../components/home/Home";
+import "../components/home/Home.css";
+import { useAuthStore } from "../store/useAuthStore";
 
 const API = "http://localhost:5000";
 
@@ -59,14 +62,66 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [requested, setRequested] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [moreModal, setMoreModal] = useState(null);
   const [moreToast, setMoreToast] = useState("");
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [activeTab, setActiveTab] = useState("posts");
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersList, setFollowersList] = useState([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followersError, setFollowersError] = useState("");
 
   const isOwn = currentUser && currentUser._id === userId;
+  const { socket } = useAuthStore();
+
+  const handleFollowersClick = async () => {
+    setFollowersModalOpen(true);
+    setFollowersLoading(true);
+    setFollowersError("");
+    setFollowersList([]);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/profiles/${userId}/followers`, { headers });
+      setFollowersList(res.data.followers || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setFollowersError("🔒 This profile is private. Only followers can view this list.");
+      } else {
+        setFollowersError("Could not load followers. Please try again.");
+      }
+    } finally {
+      setFollowersLoading(false);
+    }
+  };
+
+  // Re-sync follow status when a socket event changes it (e.g. follow_accept)
+  useEffect(() => {
+    if (!socket) return;
+    const refreshFollowStatus = async () => {
+      if (!token || !currentUser) return;
+      try {
+        const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFollowing(fsRes.data.following);
+        setRequested(fsRes.data.requested);
+        setFollowersCount(fsRes.data.followersCount);
+      } catch { /* silent */ }
+    };
+    socket.on("newNotification", (notif) => {
+      if (notif.type === "follow_accept" || notif.type === "follow") {
+        refreshFollowStatus();
+      }
+    });
+    return () => socket.off("newNotification");
+  }, [socket, userId, isOwn]);
 
   const openRegisterPrompt = () => {
     setShowRegisterMsg(true);
@@ -106,6 +161,22 @@ function Profile() {
     navigate(`/messages/${userId}`);
   };
 
+  const handleFollow = async () => {
+    if (!currentUser || !token) return;
+    setFollowLoading(true);
+    try {
+      const res = await axios.put(`${API}/profiles/${userId}/follow`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.status === "requested" || res.data.status === "request_cancelled") {
+        setRequested(res.data.requested);
+      } else {
+        setFollowing(res.data.following);
+        setFollowersCount(res.data.followersCount);
+        setRequested(false);
+      }
+    } catch { /* silent */ }
+    setFollowLoading(false);
+  };
+
   const handleMoreAction = (action) => {
     setShowMoreMenu(false);
     setMoreModal(action);
@@ -138,6 +209,66 @@ function Profile() {
     setLoadingLikes(false);
   };
 
+  const handleLike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(
+      posts.map((post) => {
+        if (post._id !== postId) return post;
+        const isLiked = post.likes.includes(currentUser._id);
+        const updatedLikes = isLiked
+          ? post.likes.filter((id) => id !== currentUser._id)
+          : [...post.likes, currentUser._id];
+          
+        const updatedDislikes = !isLiked && post.dislikes?.includes(currentUser._id)
+          ? post.dislikes.filter((id) => id !== currentUser._id)
+          : post.dislikes || [];
+          
+        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
+      })
+    );
+    try {
+      await axios.put(`${API}/posts/${postId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleDislike = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isDisliked = post.dislikes?.includes(currentUser._id);
+      const updatedDislikes = isDisliked
+        ? (post.dislikes || []).filter((id) => id !== currentUser._id)
+        : [...(post.dislikes || []), currentUser._id];
+        
+      const updatedLikes = !isDisliked && post.likes?.includes(currentUser._id)
+        ? post.likes.filter((id) => id !== currentUser._id)
+        : post.likes || [];
+        
+      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleRepost = async (postId) => {
+    if (!currentUser) return;
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isReposted = post.reposts?.includes(currentUser._id);
+      const updatedReposts = isReposted
+        ? (post.reposts || []).filter((id) => id !== currentUser._id)
+        : [...(post.reposts || []), currentUser._id];
+      return { ...post, reposts: updatedReposts };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
   useEffect(() => {
     const loadProfileData = async () => {
       try {
@@ -152,10 +283,20 @@ function Profile() {
 
       try {
         const postsRes = await axios.get(`${API}/posts`);
-        setPosts(postsRes.data.filter((post) => post.author?._id === userId));
+        const allPosts = postsRes.data;
+        setPosts(allPosts);
       } catch (err) {
         setPosts([]);
         console.error("Error fetching user posts:", err);
+      }
+
+      if (currentUser && token) {
+        try {
+          const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
+          setFollowing(fsRes.data.following);
+          setRequested(fsRes.data.requested);
+          setFollowersCount(fsRes.data.followersCount);
+        } catch { /* silent */ }
       }
     };
 
@@ -255,10 +396,10 @@ function Profile() {
   const roleLabel = getRoleLabel(profileUser?.role);
   const joinDate = profileUser?.createdAt
     ? new Date(profileUser.createdAt).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
     : "Unknown";
   const displayName = profile.displayName || profileUser?.fullName || profileUser?.username;
   const skillTags = getSkillTags(profile.skills);
@@ -282,7 +423,6 @@ function Profile() {
           <div className="prof-cover">
             <div className="prof-cover-content">
               <span className="prof-cover-kicker">KalaSetu Portfolio</span>
-              <p>{profileStoryline}</p>
             </div>
           </div>
 
@@ -303,64 +443,40 @@ function Profile() {
                 <span className={`prof-role-badge ${profileUser?.role}`}>{roleLabel}</span>
               </div>
               <p className="prof-username">@{profileUser?.username}</p>
-              <p className="prof-tagline">{profileTagline}</p>
 
-              <div className="prof-meta-row">
-                {profileRegion && (
-                  <span>
-                    <i className="fi fi-sr-map-marker" />
-                    Region {profileRegion}
-                  </span>
-                )}
+              <div className="prof-meta-row" style={{ marginTop: '10px' }}>
                 {profile.location && (
                   <span>
-                    <i className="fi fi-sr-map-marker" />
+                    <i className="fi fi-sr-map-marker" style={{ color: '#d1437b' }} />
                     {profile.location}
                   </span>
                 )}
-                {profile.userType && (
+                {skillTags.length > 0 && (
                   <span>
-                    <i className="fi fi-sr-palette" />
-                    {profile.userType}
+                    <i className="fi fi-sr-palette" style={{ color: '#C4704A' }} />
+                    {skillTags[0]}
                   </span>
                 )}
                 <span>
-                  <i className="fi fi-sr-calendar" />
+                  <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
                   Joined {joinDate}
                 </span>
               </div>
 
-              {skillTags.length > 0 && (
-                <div className="prof-skill-tags">
-                  {skillTags.map((skill) => (
-                    <span key={skill} className="prof-skill-pill">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               <div className="prof-stats-row">
                 <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-image" />
-                  </span>
-                  <strong>{posts.length}</strong>
+                  <span className="prof-stat-icon"><i className="fi fi-sr-apps" /></span>
+                  <strong>{posts.filter(p => p.author?._id === userId).length}</strong>
                   <small>Posts</small>
                 </div>
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-heart" />
-                  </span>
-                  <strong>{totalLikes}</strong>
-                  <small>Likes</small>
-                </div>
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon">
-                    <i className="fi fi-sr-palette" />
-                  </span>
-                  <strong>{skillTags.length || 1}</strong>
-                  <small>{skillTags.length ? "Skills" : "Profile Focus"}</small>
+                <div
+                  className="prof-stat-card prof-stat-clickable"
+                  onClick={handleFollowersClick}
+                  title="View followers"
+                >
+                  <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
+                  <strong>{followersCount}</strong>
+                  <small>Followers</small>
                 </div>
               </div>
             </div>
@@ -372,9 +488,14 @@ function Profile() {
                 </button>
               )}
               {currentUser && !isOwn && (
-                <button className="prof-primary-btn" onClick={handleMessageClick}>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Collaborate
+                <button
+                  className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
+                  style={requested ? { background: "rgba(47, 111, 109, 0.15)", color: "var(--brand-900)" } : {}}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                >
+                  <i className={`fi ${following ? "fi-sr-user-check" : requested ? "fi-sr-time-check" : "fi-sr-user-add"}`} />
+                  {following ? "Following" : requested ? "Requested" : "Follow"}
                 </button>
               )}
               {currentUser && !isOwn && (
@@ -409,102 +530,78 @@ function Profile() {
 
         <div className="prof-body">
           <div className="prof-posts-section">
+            <div className="prof-tabs">
+              <button
+                className={`prof-tab ${activeTab === "posts" ? "active" : ""}`}
+                onClick={() => setActiveTab("posts")}
+              >
+                <i className="fi fi-sr-apps" />
+                Posts
+              </button>
+              <button
+                className={`prof-tab ${activeTab === "reposts" ? "active" : ""}`}
+                onClick={() => setActiveTab("reposts")}
+              >
+                <i className="fi fi-sr-arrows-retweet" />
+                Reposts
+              </button>
+            </div>
+
             <div className="prof-posts-header">
               <div>
                 <h3 className="prof-posts-title">
-                  Cultural Posts <span className="prof-posts-count">{posts.length}</span>
+                  {activeTab === "posts" ? "Cultural Posts" : "Shared Stories"}
+                  <span className="prof-posts-count">
+                    {activeTab === "posts"
+                      ? posts.filter(p => p.author?._id === userId).length
+                      : posts.filter(p => p.reposts?.includes(userId)).length}
+                  </span>
                 </h3>
                 <p className="prof-posts-subtitle">
-                  Stories, updates, and cultural work shared through KalaSetu.
+                  {activeTab === "posts"
+                    ? "Original stories and updates shared through KalaSetu."
+                    : "Cultural works and announcements curated by this profile."}
                 </p>
               </div>
 
-              {isOwn && profileUser?.role !== "user" && (
+              {isOwn && profileUser?.role !== "user" && activeTab === "posts" && (
                 <button className="prof-primary-btn prof-posts-cta" onClick={() => navigate("/create-post")}>
                   Create Post
                 </button>
               )}
             </div>
 
-            {posts.length === 0 ? (
+            {(activeTab === "posts"
+              ? posts.filter(p => p.author?._id === userId).length
+              : posts.filter(p => p.reposts?.includes(userId)).length) === 0 ? (
               <div className="prof-no-posts">
                 <div className="prof-empty-icon">
-                  <i className="fi fi-sr-image" />
+                  <i className={activeTab === "posts" ? "fi fi-sr-image" : "fi fi-sr-arrows-retweet"} />
                 </div>
                 <p>
-                  No posts yet
-                  {isOwn ? ". Share your first cultural story and start building your portfolio." : "."}
+                  {activeTab === "posts"
+                    ? (isOwn ? "No posts yet. Share your first cultural story and start building your portfolio." : "No posts yet.")
+                    : (isOwn ? "You haven't reposted anything yet. Share cultural works from others to build your collection." : "No reposts yet.")}
                 </p>
               </div>
             ) : (
-              <div className="prof-posts-grid">
-                {posts.map((post) => (
-                  <article key={post._id} className="prof-post-card">
-                    <div className="prof-post-media">
-                      {post.image ? (
-                        <img src={post.image} alt={post.title} className="prof-post-img" />
-                      ) : (
-                        <div className="prof-post-placeholder">
-                          <i className="fi fi-sr-image" />
-                        </div>
-                      )}
-                      <div className="prof-post-overlay">
-                        <span className="prof-post-cat">{post.category}</span>
-                      </div>
-                    </div>
-
-                    <div className="prof-post-body">
-                      <span className="prof-post-date">
-                        <i className="fi fi-sr-calendar" />
-                        {new Date(post.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <div className="prof-post-tags">
-                        <span className="prof-post-tag">#{post.category}</span>
-                        {skillTags.slice(0, 2).map((skill) => (
-                          <span key={`${post._id}-${skill}`} className="prof-post-tag muted">
-                            #{skill.replace(/\s+/g, "")}
-                          </span>
-                        ))}
-                      </div>
-                      <h4>{post.title}</h4>
-                      <p>{post.content}</p>
-
-                      <div className="prof-post-footer">
-                        <button
-                          className="prof-like-pill"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleLikesClick(post._id, post.likes?.length || 0);
-                          }}
-                        >
-                          <i className="fi fi-sr-heart" />
-                          {post.likes?.length || 0}
-                        </button>
-
-                        {isOwn && (
-                          <div className="prof-post-actions">
-                            <button
-                              className="prof-post-action"
-                              onClick={() => navigate(`/edit-post/${post._id}`)}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="prof-post-action danger"
-                              onClick={() => handleDeletePost(post._id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
+              <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto", padding: "10px 0" }}>
+                {posts
+                  .filter(p => activeTab === "posts" ? p.author?._id === userId : p.reposts?.includes(userId))
+                  .map((post) => (
+                    <PostCard
+                      key={post._id}
+                      post={post}
+                      currentUser={currentUser}
+                      isOwn={isOwn && post.author?._id === currentUser?._id}
+                      onLike={handleLike}
+                      onDislike={handleDislike}
+                      onRepost={handleRepost}
+                      onShowLikes={handleLikesClick}
+                      onEdit={() => navigate(`/edit-post/${post._id}`)}
+                      onDelete={() => handleDeletePost(post._id)}
+                    />
+                  ))}
               </div>
             )}
           </div>
@@ -567,14 +664,10 @@ function Profile() {
 
             {currentUser && !isOwn && (
               <div className="prof-card prof-contact-rail">
-                <h3>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Contact
-                </h3>
+                <h3><i className="fi fi-sr-comment-alt-dots" /> Contact</h3>
                 <p>Open a conversation for collaborations, cultural projects, or event opportunities.</p>
                 <button className="prof-primary-btn" onClick={handleMessageClick}>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  Contact / Collaborate
+                  <i className="fi fi-sr-comment-alt-dots" /> Message
                 </button>
               </div>
             )}
@@ -638,6 +731,69 @@ function Profile() {
                       <div className="prof-liker-info">
                         <span className="prof-liker-username">{user.username}</span>
                         <span className="prof-liker-name">{user.fullName}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Followers Modal */}
+      {followersModalOpen && (
+        <div className="prof-logout-overlay" onClick={() => setFollowersModalOpen(false)}>
+          <div className="prof-more-modal prof-followers-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prof-likes-header">
+              <h3 className="display-serif">
+                <i className="fi fi-sr-user-add" style={{ marginRight: 8, color: "var(--brand-700)" }} />
+                Followers
+                {!followersLoading && !followersError && (
+                  <span className="prof-followers-count-badge">{followersList.length}</span>
+                )}
+              </h3>
+              <button onClick={() => setFollowersModalOpen(false)}>
+                <i className="fi fi-sr-cross-small" />
+              </button>
+            </div>
+
+            <div className="prof-likes-body">
+              {followersLoading ? (
+                <div className="prof-likes-loading">
+                  <div className="prof-spinner" />
+                  <p style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 14 }}>Loading followers...</p>
+                </div>
+              ) : followersError ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon">
+                    <i className="fi fi-sr-lock" />
+                  </div>
+                  <p>{followersError}</p>
+                </div>
+              ) : followersList.length === 0 ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon" style={{ background: "rgba(47,111,109,0.08)" }}>
+                    <i className="fi fi-sr-user-add" style={{ color: "var(--brand-700)" }} />
+                  </div>
+                  <p style={{ color: "var(--text-muted)" }}>No followers yet.</p>
+                </div>
+              ) : (
+                <div className="prof-likers-list">
+                  {followersList.map((follower) => (
+                    <div
+                      key={follower._id}
+                      className="prof-liker-item"
+                      onClick={() => { setFollowersModalOpen(false); navigate(`/profile/${follower._id}`); }}
+                    >
+                      {follower.photo ? (
+                        <img src={follower.photo} alt={follower.username} className="prof-follower-avatar-img" />
+                      ) : (
+                        <div className="prof-liker-avatar">{follower.username?.[0]?.toUpperCase()}</div>
+                      )}
+                      <div className="prof-liker-info">
+                        <span className="prof-liker-username">{follower.displayName || follower.fullName || follower.username}</span>
+                        <span className="prof-liker-name">@{follower.username}</span>
                       </div>
                     </div>
                   ))}

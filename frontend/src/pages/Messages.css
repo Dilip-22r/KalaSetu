@@ -817,3 +817,257 @@
     min-height: 50px;
   }
 }
+/* Shared Post Preview Styles */
+.msg-shared-post {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid rgba(47, 111, 109, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.msg-shared-post:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.msg-bubble.mine .msg-shared-post {
+  background: rgba(247, 243, 237, 0.98);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.msg-shared-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.msg-shared-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-shared-details {
+  padding: 12px;
+}
+
+.msg-shared-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.msg-shared-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--brand-700);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.msg-shared-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.msg-shared-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.msg-bubble.mine .msg-shared-name,
+.msg-bubble.mine .msg-shared-title {
+  color: var(--brand-900);
+}
+/* Enhanced Shared Post Preview Styles (LinkedIn-like) */
+.msg-shared-post {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0;
+  border: 1px solid rgba(43, 43, 43, 0.12);
+  cursor: pointer;
+  width: 100%;
+  max-width: 380px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.msg-shared-post:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  border-color: var(--brand-700);
+}
+
+.msg-shared-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.msg-shared-avatar-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--brand-700);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.msg-shared-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-shared-author-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.msg-shared-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.2;
+}
+
+.msg-shared-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.msg-shared-img {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  overflow: hidden;
+  background: #fdfdfd;
+}
+
+.msg-shared-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-shared-content {
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #fff, #f9f9f9);
+}
+
+.msg-shared-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.msg-shared-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-height: 4.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Adjust bubble padding when sharing */
+.msg-bubble-wrap .msg-bubble:has(.msg-shared-post) {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.msg-bubble-wrap.mine .msg-bubble:has(.msg-shared-post) {
+    background: transparent;
+}
+
+/* Ensure text bubble still looks good with share card */
+.msg-bubble:has(.msg-shared-post) p {
+  padding: 12px 14px;
+  margin: 0;
+  background: var(--brand-700);
+  color: #fff;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 8px;
+}
+
+.msg-bubble.theirs:has(.msg-shared-post) p {
+    background: #fff;
+    color: var(--text-strong);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: none;
+}
+/* Media Sharing Styles */
+.msg-media-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  background: rgba(47, 111, 109, 0.08);
+  border-radius: 14px;
+  color: var(--brand-700);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.msg-media-btn:hover {
+  background: rgba(47, 111, 109, 0.16);
+  color: var(--brand-900);
+}
+
+.msg-bubble-media {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #fdfdfd;
+}
+
+.msg-bubble-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.msg-bubble.mine .msg-bubble-media {
+    border-color: rgba(255, 255, 255, 0.2);
+}

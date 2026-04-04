@@ -19,6 +19,7 @@ function EditPost() {
   const { postId } = useParams();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     title: "",
     content: "",
@@ -56,6 +57,12 @@ function EditPost() {
   }, [navigate, postId, user._id]);
 
   const handleChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+
+  const handleNext = () => {
+    if (!form.title.trim()) { setError("Title is required."); return; }
+    setError("");
+    setStep(2);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -98,109 +105,93 @@ function EditPost() {
       <Navbar />
 
       <div className="cp-shell">
-        <aside className="cp-intro">
-          <span className="cp-kicker">Refine your story</span>
-          <h2 className="display-serif">Update the post so the message is sharper and easier to discover.</h2>
-          <p>
-            Small edits to the title, tags, or opening lines can make your post clearer and more
-            compelling for people browsing KalaSetu.
-          </p>
-
-          <div className="cp-intro-list">
-            <div className="cp-intro-item">
-              <span><i className="fi fi-sr-calendar" /></span>
-              <div>
-                <strong>Keep details current</strong>
-                <small>Refresh any dates, event information, or collaboration requests when needed.</small>
-              </div>
-            </div>
-            <div className="cp-intro-item">
-              <span><i className="fi fi-sr-search" /></span>
-              <div>
-                <strong>Improve discoverability</strong>
-                <small>Adjust category and tags so your post reaches the right people faster.</small>
-              </div>
-            </div>
-            <div className="cp-intro-item">
-              <span><i className="fi fi-sr-image" /></span>
-              <div>
-                <strong>Refresh the visual</strong>
-                <small>Swap in a stronger image to improve presentation inside the feed.</small>
-              </div>
-            </div>
-          </div>
-        </aside>
-
         <div className="cp-card">
           <h2>Edit Post</h2>
           <p className="cp-subtitle">Update your cultural post</p>
-
           {error && <div className="cp-error">{error}</div>}
 
-          <form onSubmit={handleSubmit} className="cp-form">
-            <div className="cp-field">
-              <label>Title *</label>
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Post title"
-              />
-            </div>
-
-            <div className="cp-field">
-              <label>Category</label>
-              <select name="category" value={form.category} onChange={handleChange}>
-                {categoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="cp-field">
-              <label>Content *</label>
-              <textarea name="content" value={form.content} onChange={handleChange} rows={8} />
-            </div>
-
-            <div className="cp-field">
-              <label>
-                Tags <span className="cp-hint">(comma-separated)</span>
-              </label>
-              <input
-                type="text"
-                name="tags"
-                value={form.tags}
-                onChange={handleChange}
-                placeholder="e.g. handloom, folk art"
-              />
-            </div>
-
-            <div className="cp-field">
-              <label>
-                Image URL <span className="cp-hint">(optional)</span>
-              </label>
-              <input
-                type="url"
-                name="image"
-                value={form.image}
-                onChange={handleChange}
-                placeholder="https://..."
-              />
-            </div>
-
-            {form.image && (
-              <div className="cp-preview">
-                <img src={form.image} alt="Preview" onError={(event) => { event.target.style.display = "none"; }} />
+          {step === 1 && (
+            <div className="cp-form">
+              <div className="cp-field">
+                <label>Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  placeholder="Post title"
+                />
               </div>
-            )}
+              <div className="cp-row">
+                <div className="cp-field">
+                  <label>Category</label>
+                  <select name="category" value={form.category} onChange={handleChange}>
+                    {categoryOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="cp-field">
+                  <label>Tags <span className="cp-hint">(comma-separated)</span></label>
+                  <input
+                    type="text"
+                    name="tags"
+                    value={form.tags}
+                    onChange={handleChange}
+                    placeholder="e.g. handloom, folk art"
+                  />
+                </div>
+              </div>
+              <button type="button" className="cp-submit" onClick={handleNext}>
+                Next
+              </button>
+            </div>
+          )}
 
-            <button type="submit" className="cp-submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-          </form>
+          {step === 2 && (
+            <form onSubmit={handleSubmit} className="cp-form">
+              <div className="cp-field">
+                <label>Content *</label>
+                <textarea name="content" value={form.content} onChange={handleChange} rows={7} />
+              </div>
+              <div className="cp-field">
+                <label>Image <span className="cp-hint">(optional)</span></label>
+                <div className="cp-image-upload">
+                  {form.image && (
+                    <div className="cp-preview">
+                      <img src={form.image} alt="Preview" />
+                      <button type="button" className="cp-remove-img" onClick={() => setForm({ ...form, image: "" })}>✕ Remove</button>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="editPostImageUpload"
+                    className="cp-file-input"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      e.target.value = null;
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setForm((prev) => ({ ...prev, image: reader.result }));
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  <label htmlFor="editPostImageUpload" className="cp-upload-label">
+                    <i className="fi fi-sr-picture" /> Browse from device
+                  </label>
+                </div>
+              </div>
+              <div className="cp-form-actions">
+                <button type="button" className="cp-back" onClick={() => { setError(""); setStep(1); }}>
+                  ← Back
+                </button>
+                <button type="submit" className="cp-submit" disabled={loading}>
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

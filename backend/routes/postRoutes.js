@@ -92,9 +92,13 @@ router.put("/:id/like", requireAuth, async (req, res) => {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
     const idx = post.likes.indexOf(req.user.id);
+    const dislikeIdx = post.dislikes?.indexOf(req.user.id);
     
     if (idx === -1) {
       post.likes.push(req.user.id);
+      if (dislikeIdx !== undefined && dislikeIdx !== -1) {
+        post.dislikes.splice(dislikeIdx, 1);
+      }
       await post.save();
 
       // Send Notification
@@ -145,9 +149,28 @@ router.put("/:id/dislike", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+    if (!post.dislikes) post.dislikes = [];
     const idx = post.dislikes.indexOf(req.user.id);
-    if (idx === -1) post.dislikes.push(req.user.id);
-    else post.dislikes.splice(idx, 1);
+    const likeIdx = post.likes.indexOf(req.user.id);
+    
+    if (idx === -1) {
+      post.dislikes.push(req.user.id);
+      if (likeIdx !== -1) {
+        post.likes.splice(likeIdx, 1);
+        
+        // Remove 'like' notification if we are removing a like
+        if (post.author.toString() !== req.user.id) {
+          await Notification.deleteOne({
+            recipient: post.author,
+            sender: req.user.id,
+            type: "like",
+            post: post._id,
+          });
+        }
+      }
+    } else {
+      post.dislikes.splice(idx, 1);
+    }
     await post.save();
     res.json({ dislikes: post.dislikes.length });
   } catch (err) {

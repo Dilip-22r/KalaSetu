@@ -414,7 +414,12 @@ function Home() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== user._id)
           : [...post.likes, user._id];
-        return { ...post, likes: updatedLikes };
+        
+        const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
+          ? post.dislikes.filter((id) => id !== user._id)
+          : post.dislikes || [];
+          
+        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
 
@@ -438,7 +443,12 @@ function Home() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== user._id)
         : [...(post.dislikes || []), user._id];
-      return { ...post, dislikes: updatedDislikes };
+        
+      const updatedLikes = !isDisliked && post.likes?.includes(user._id)
+        ? post.likes.filter((id) => id !== user._id)
+        : post.likes || [];
+        
+      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
       await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });

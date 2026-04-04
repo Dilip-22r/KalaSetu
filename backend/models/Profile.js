@@ -16,6 +16,11 @@ const profileSchema = new mongoose.Schema(
     about: { type: String },
     photo: { type: String, default: "" },
     userType: { type: String, enum: ["Artisan", "NGO", "user"] },
+    organizationName: { type: String },
+    verificationDocument: { type: String },
+    organizationId: { type: String },
+    isPrivate: { type: Boolean, default: false },
+    notificationRetentionDays: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

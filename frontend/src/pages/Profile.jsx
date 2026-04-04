@@ -5,6 +5,7 @@ import Navbar from "../components/common/Navbar";
 import "./Profile.css";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
+import { useAuthStore } from "../store/useAuthStore";
 
 const API = "http://localhost:5000";
 
@@ -62,6 +63,7 @@ function Profile() {
   const [notFound, setNotFound] = useState(false);
   const [showRegisterMsg, setShowRegisterMsg] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [requested, setRequested] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -71,8 +73,55 @@ function Profile() {
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersList, setFollowersList] = useState([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followersError, setFollowersError] = useState("");
 
   const isOwn = currentUser && currentUser._id === userId;
+  const { socket } = useAuthStore();
+
+  const handleFollowersClick = async () => {
+    setFollowersModalOpen(true);
+    setFollowersLoading(true);
+    setFollowersError("");
+    setFollowersList([]);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/profiles/${userId}/followers`, { headers });
+      setFollowersList(res.data.followers || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setFollowersError("🔒 This profile is private. Only followers can view this list.");
+      } else {
+        setFollowersError("Could not load followers. Please try again.");
+      }
+    } finally {
+      setFollowersLoading(false);
+    }
+  };
+
+  // Re-sync follow status when a socket event changes it (e.g. follow_accept)
+  useEffect(() => {
+    if (!socket) return;
+    const refreshFollowStatus = async () => {
+      if (!token || !currentUser) return;
+      try {
+        const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFollowing(fsRes.data.following);
+        setRequested(fsRes.data.requested);
+        setFollowersCount(fsRes.data.followersCount);
+      } catch { /* silent */ }
+    };
+    socket.on("newNotification", (notif) => {
+      if (notif.type === "follow_accept" || notif.type === "follow") {
+        refreshFollowStatus();
+      }
+    });
+    return () => socket.off("newNotification");
+  }, [socket, userId, isOwn]);
 
   const openRegisterPrompt = () => {
     setShowRegisterMsg(true);
@@ -117,8 +166,13 @@ function Profile() {
     setFollowLoading(true);
     try {
       const res = await axios.put(`${API}/profiles/${userId}/follow`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      setFollowing(res.data.following);
-      setFollowersCount(res.data.followersCount);
+      if (res.data.status === "requested" || res.data.status === "request_cancelled") {
+        setRequested(res.data.requested);
+      } else {
+        setFollowing(res.data.following);
+        setFollowersCount(res.data.followersCount);
+        setRequested(false);
+      }
     } catch { /* silent */ }
     setFollowLoading(false);
   };
@@ -165,7 +219,12 @@ function Profile() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== currentUser._id)
           : [...post.likes, currentUser._id];
-        return { ...post, likes: updatedLikes };
+          
+        const updatedDislikes = !isLiked && post.dislikes?.includes(currentUser._id)
+          ? post.dislikes.filter((id) => id !== currentUser._id)
+          : post.dislikes || [];
+          
+        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
     try {
@@ -182,7 +241,12 @@ function Profile() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== currentUser._id)
         : [...(post.dislikes || []), currentUser._id];
-      return { ...post, dislikes: updatedDislikes };
+        
+      const updatedLikes = !isDisliked && post.likes?.includes(currentUser._id)
+        ? post.likes.filter((id) => id !== currentUser._id)
+        : post.likes || [];
+        
+      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
       await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
@@ -226,10 +290,11 @@ function Profile() {
         console.error("Error fetching user posts:", err);
       }
 
-      if (currentUser && currentUser._id !== userId && token) {
+      if (currentUser && token) {
         try {
           const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
           setFollowing(fsRes.data.following);
+          setRequested(fsRes.data.requested);
           setFollowersCount(fsRes.data.followersCount);
         } catch { /* silent */ }
       }
@@ -401,23 +466,17 @@ function Profile() {
               <div className="prof-stats-row">
                 <div className="prof-stat-card">
                   <span className="prof-stat-icon"><i className="fi fi-sr-apps" /></span>
-                  <strong>{posts.length}</strong>
+                  <strong>{posts.filter(p => p.author?._id === userId).length}</strong>
                   <small>Posts</small>
                 </div>
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
-                  <strong>{totalLikes}</strong>
-                  <small>Likes</small>
-                </div>
-                <div className="prof-stat-card">
+                <div
+                  className="prof-stat-card prof-stat-clickable"
+                  onClick={handleFollowersClick}
+                  title="View followers"
+                >
                   <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
                   <strong>{followersCount}</strong>
                   <small>Followers</small>
-                </div>
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-palette" /></span>
-                  <strong>{skillTags.length || 1}</strong>
-                  <small>{skillTags.length ? "Skills" : "Profile Focus"}</small>
                 </div>
               </div>
             </div>
@@ -430,12 +489,13 @@ function Profile() {
               )}
               {currentUser && !isOwn && (
                 <button
-                  className={`prof-primary-btn ${following ? "prof-following-btn" : ""}`}
+                  className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
+                  style={requested ? { background: "rgba(47, 111, 109, 0.15)", color: "var(--brand-900)" } : {}}
                   onClick={handleFollow}
                   disabled={followLoading}
                 >
-                  <i className={`fi ${following ? "fi-sr-user-check" : "fi-sr-user-add"}`} />
-                  {following ? "Following" : "Follow"}
+                  <i className={`fi ${following ? "fi-sr-user-check" : requested ? "fi-sr-time-check" : "fi-sr-user-add"}`} />
+                  {following ? "Following" : requested ? "Requested" : "Follow"}
                 </button>
               )}
               {currentUser && !isOwn && (
@@ -671,6 +731,69 @@ function Profile() {
                       <div className="prof-liker-info">
                         <span className="prof-liker-username">{user.username}</span>
                         <span className="prof-liker-name">{user.fullName}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Followers Modal */}
+      {followersModalOpen && (
+        <div className="prof-logout-overlay" onClick={() => setFollowersModalOpen(false)}>
+          <div className="prof-more-modal prof-followers-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prof-likes-header">
+              <h3 className="display-serif">
+                <i className="fi fi-sr-user-add" style={{ marginRight: 8, color: "var(--brand-700)" }} />
+                Followers
+                {!followersLoading && !followersError && (
+                  <span className="prof-followers-count-badge">{followersList.length}</span>
+                )}
+              </h3>
+              <button onClick={() => setFollowersModalOpen(false)}>
+                <i className="fi fi-sr-cross-small" />
+              </button>
+            </div>
+
+            <div className="prof-likes-body">
+              {followersLoading ? (
+                <div className="prof-likes-loading">
+                  <div className="prof-spinner" />
+                  <p style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 14 }}>Loading followers...</p>
+                </div>
+              ) : followersError ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon">
+                    <i className="fi fi-sr-lock" />
+                  </div>
+                  <p>{followersError}</p>
+                </div>
+              ) : followersList.length === 0 ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon" style={{ background: "rgba(47,111,109,0.08)" }}>
+                    <i className="fi fi-sr-user-add" style={{ color: "var(--brand-700)" }} />
+                  </div>
+                  <p style={{ color: "var(--text-muted)" }}>No followers yet.</p>
+                </div>
+              ) : (
+                <div className="prof-likers-list">
+                  {followersList.map((follower) => (
+                    <div
+                      key={follower._id}
+                      className="prof-liker-item"
+                      onClick={() => { setFollowersModalOpen(false); navigate(`/profile/${follower._id}`); }}
+                    >
+                      {follower.photo ? (
+                        <img src={follower.photo} alt={follower.username} className="prof-follower-avatar-img" />
+                      ) : (
+                        <div className="prof-liker-avatar">{follower.username?.[0]?.toUpperCase()}</div>
+                      )}
+                      <div className="prof-liker-info">
+                        <span className="prof-liker-username">{follower.displayName || follower.fullName || follower.username}</span>
+                        <span className="prof-liker-name">@{follower.username}</span>
                       </div>
                     </div>
                   ))}

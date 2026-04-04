@@ -25,6 +25,17 @@ function EditProfile() {
   const [zoom, setZoom] = useState(1);
   const [croppedPx, setCroppedPx] = useState(null);
 
+  // Notification Retention State
+  const [retentionOption, setRetentionOption] = useState("0");
+  const [customDays, setCustomDays] = useState(7);
+
+  // Delete Account State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   const {
     register,
     handleSubmit,
@@ -56,6 +67,15 @@ function EditProfile() {
         setValue("organizationId", profile.organizationId || "");
         setValue("verificationDocument", profile.verificationDocument || "");
         setValue("isPrivate", profile.isPrivate || false);
+        
+        const retDays = profile.notificationRetentionDays || 0;
+        if ([0, 1, 7, 30].includes(retDays)) {
+          setRetentionOption(retDays.toString());
+        } else {
+          setRetentionOption("custom");
+          setCustomDays(retDays);
+        }
+
         if (profile.photo) setPreviewPhoto(profile.photo);
       } catch {
         // No profile yet, fall back to defaults.
@@ -150,6 +170,7 @@ function EditProfile() {
           organizationId: data.organizationId,
           verificationDocument: data.verificationDocument,
           isPrivate: data.isPrivate,
+          notificationRetentionDays: retentionOption === "custom" ? parseInt(customDays) || 0 : parseInt(retentionOption),
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -159,6 +180,24 @@ function EditProfile() {
     }
 
     setLoading(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE" || !deletePassword) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await axios.delete(`${API}/auth/account`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { password: deletePassword },
+      });
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      window.location.href = "/";
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || "Failed to delete account");
+      setDeleting(false);
+    }
   };
 
   if (fetching) {
@@ -332,6 +371,54 @@ function EditProfile() {
             </button>
           </form>
         </div>
+
+        <div className="ep-card">
+          <div className="ep-card-header">
+            <h2>Notification Preferences</h2>
+            <p>Automatically delete old notifications to keep your feed clean.</p>
+          </div>
+          <div className="ep-card-body" style={{ marginTop: "16px" }}>
+            <div className="ep-field">
+              <label>Delete Notifications After</label>
+              <select
+                className="ep-select"
+                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "100%", outline: "none", fontSize: "14px" }}
+                value={retentionOption}
+                onChange={(e) => setRetentionOption(e.target.value)}
+              >
+                <option value="0">Never (Keep Forever)</option>
+                <option value="1">1 Day</option>
+                <option value="7">7 Days</option>
+                <option value="30">30 Days</option>
+                <option value="custom">Custom (Days)</option>
+              </select>
+            </div>
+            
+            {retentionOption === "custom" && (
+              <div className="ep-field" style={{ marginTop: "16px" }}>
+                <label>Custom Number of Days</label>
+                <input
+                  type="number"
+                  style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "100%", outline: "none", fontSize: "14px" }}
+                  min="1"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                  placeholder="e.g. 14"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="ep-card danger-zone">
+          <h3 className="danger-title">Danger Zone</h3>
+          <p className="danger-desc">
+            Once you delete your account, there is no going back. All your data, posts, messages, and profile information will be permanently erased. Please be certain.
+          </p>
+          <button type="button" className="danger-btn" onClick={() => setShowDeleteModal(true)}>
+            Delete Account
+          </button>
+        </div>
       </div>
 
       {rawImage && (
@@ -368,6 +455,63 @@ function EditProfile() {
               </button>
               <button type="button" className="ep-cropper-save" onClick={applyCrop}>
                 Apply Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="ep-delete-overlay">
+          <div className="ep-delete-modal">
+            <h3>Delete Account</h3>
+            <p>This action is permanent and cannot be undone. To verify, please enter your password and type <strong>DELETE</strong> below.</p>
+            
+            {deleteError && <div className="ep-error">{deleteError}</div>}
+
+            <div className="ep-delete-field">
+              <label>Password</label>
+              <input
+                type="password"
+                className="ep-delete-input"
+                placeholder="Enter your current password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
+            </div>
+
+            <div className="ep-delete-field">
+              <label>Type DELETE</label>
+              <input
+                type="text"
+                className="ep-delete-input"
+                placeholder="DELETE"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+              />
+            </div>
+
+            <div className="ep-delete-actions">
+              <button
+                type="button"
+                className="ep-delete-cancel"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                  setDeleteConfirmation("");
+                  setDeleteError("");
+                }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ep-delete-confirm"
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmation !== "DELETE" || !deletePassword || deleting}
+              >
+                {deleting ? "Deleting..." : "Confirm Deletion"}
               </button>
             </div>
           </div>

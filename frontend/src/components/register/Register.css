@@ -158,9 +158,9 @@
 .reg-field textarea {
   width: 100%;
   padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(47, 111, 109, 0.14);
-  background: rgba(247, 243, 237, 0.82);
+  border-radius: 12px;
+  border: 1px solid #e2ded5;
+  background: #fdfaf5;
   color: var(--text-strong);
   font-size: 14px;
   outline: none;
@@ -171,8 +171,8 @@
 .reg-field select:focus,
 .reg-field textarea:focus {
   background: #fff;
-  border-color: rgba(47, 111, 109, 0.36);
-  box-shadow: 0 0 0 4px rgba(47, 111, 109, 0.1);
+  border-color: #397a7e;
+  box-shadow: 0 0 0 3px rgba(57, 122, 126, 0.1);
 }
 
 .reg-field textarea {
@@ -185,19 +185,28 @@
   font-size: 12px;
 }
 
-.reg-submit {
-  padding: 14px 18px;
+.reg-submit,
+.reg-cancel {
+  flex: 1;
+  padding: 14px 32px;
   border: none;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
+  border-radius: 30px;
+  background: #cd6043;
   color: #fff;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 16px 26px rgba(209, 123, 73, 0.24);
+  transition: background 0.2s;
+  text-align: center;
 }
 
-.reg-submit:disabled {
+.reg-submit:hover,
+.reg-cancel:hover {
+  background: #b25035;
+}
+
+.reg-submit:disabled,
+.reg-cancel:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -230,19 +239,19 @@
 
 .reg-wizard-header {
   margin-bottom: 24px;
+  text-align: left;
 }
 
 .reg-wizard-steps {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 24px auto 32px;
-  max-width: 480px;
+  justify-content: flex-start;
+  margin: 16px 0 32px;
 }
 
 .wizard-step {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   position: relative;
@@ -250,47 +259,41 @@
 }
 
 .wizard-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-base);
-  color: var(--text-muted);
+  background: #e0e0e0;
+  color: #fff;
   font-weight: 700;
-  font-size: 15px;
-  border: 2px solid rgba(47, 111, 109, 0.2);
+  font-size: 13px;
   transition: all 0.3s ease;
 }
 
 .wizard-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  color: var(--text-muted);
+  color: #999;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  text-align: center;
 }
 
 .wizard-step.active .wizard-icon {
-  background: #4a8b8f;
+  background: #397a7e;
   color: #fff;
-  border-color: #4a8b8f;
-  box-shadow: 0 4px 12px rgba(74, 139, 143, 0.3);
 }
 
 .wizard-step.active .wizard-label {
-  color: #4a8b8f;
+  color: #397a7e;
 }
 
 .wizard-line {
-  flex: 1;
+  width: 32px;
   height: 2px;
-  background: rgba(47, 111, 109, 0.2);
-  margin: 0 12px;
-  margin-top: -18px;
-  /* account for label */
+  background: #e0e0e0;
+  margin: 0 16px;
   transition: all 0.3s ease;
 }
 
@@ -320,24 +323,91 @@
 .reg-actions {
   display: flex;
   gap: 12px;
-  justify-content: flex-end;
+  width: 100%;
   margin-top: 12px;
 }
 
-.reg-cancel {
-  padding: 14px 20px;
-  border-radius: var(--radius-pill);
-  background: rgba(47, 111, 109, 0.08);
-  color: var(--brand-900);
-  font-size: 14px;
-  font-weight: 700;
+/* Upload styles */
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.upload-btn {
+  padding: 8px 16px;
+  background: #f0ebe1;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  border: none;
+  color: #555;
+  display: inline-block;
   transition: background 0.2s;
 }
+.upload-btn:hover {
+  background: #e4decb;
+}
+.file-placeholder {
+  font-size: 13px;
+  color: #999;
+}
+.file-selected-text {
+  font-size: 12px;
+  color: #cd6043;
+  margin-top: 4px;
+}
 
-.reg-cancel:hover {
-  background: rgba(47, 111, 109, 0.15);
+/* Photo upload */
+.photo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.photo-upload-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+}
+.photo-preview-circle {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-preview-placeholder i {
+  font-size: 24px;
+  color: #999;
+}
+.photo-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.photo-upload-btn {
+  padding: 8px 16px;
+  background: #f0ebe1;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #555;
+  transition: background 0.2s;
+}
+.photo-upload-btn:hover {
+  background: #e4decb;
+}
+.photo-remove-btn {
+  background: none;
+  border: none;
+  color: #cd6043;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 select.multiple-select {
@@ -452,9 +522,9 @@ select.multiple-select {
 .reg-multi-select-trigger {
   width: 100%;
   padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(47, 111, 109, 0.14);
-  background: rgba(247, 243, 237, 0.82);
+  border-radius: 12px;
+  border: 1px solid #e2ded5;
+  background: #fdfaf5;
   color: var(--text-strong);
   font-size: 14px;
   cursor: pointer;
@@ -468,8 +538,8 @@ select.multiple-select {
 .reg-multi-select-trigger:hover,
 .reg-multi-select-trigger.open {
   background: #fff;
-  border-color: rgba(47, 111, 109, 0.36);
-  box-shadow: 0 0 0 4px rgba(47, 111, 109, 0.1);
+  border-color: #397a7e;
+  box-shadow: 0 0 0 3px rgba(57, 122, 126, 0.1);
 }
 
 .reg-multi-select-dropdown {

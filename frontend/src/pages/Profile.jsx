@@ -103,7 +103,7 @@ function Profile() {
 
   // Re-sync follow status when a socket event changes it (e.g. follow_accept)
   useEffect(() => {
-    if (!socket || isOwn) return;
+    if (!socket) return;
     const refreshFollowStatus = async () => {
       if (!token || !currentUser) return;
       try {
@@ -290,7 +290,7 @@ function Profile() {
         console.error("Error fetching user posts:", err);
       }
 
-      if (currentUser && currentUser._id !== userId && token) {
+      if (currentUser && token) {
         try {
           const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
           setFollowing(fsRes.data.following);

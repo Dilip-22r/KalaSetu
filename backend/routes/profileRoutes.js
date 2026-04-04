@@ -128,10 +128,19 @@ router.put("/:userId/accept-follow", requireAuth, async (req, res) => {
         type: "follow_accept",
       });
       await newNotif.save();
+
       const populated = await newNotif.populate("sender", "username fullName");
       const receiverSocketId = getReceiverSocketId(requester._id.toString());
       if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populated);
     }
+    
+    // Update the original request notification so the owner sees "You accepted"
+    // (Run this outside the block to catch old legacy notifications that got stuck)
+    await Notification.updateMany(
+      { recipient: me._id, sender: requester._id, type: "follow_request" },
+      { type: "follow_accepted_by_me" }
+    );
+      
     res.json({ message: "Follow request accepted", followersCount: me.followers.length });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -150,6 +159,14 @@ router.put("/:userId/reject-follow", requireAuth, async (req, res) => {
       me.followRequests.pull(requesterId);
       await me.save();
     }
+    
+    // Update the original request notification so the owner sees it was rejected
+    // (Run outside block to clean up stuck legacy notifications)
+    await Notification.updateMany(
+      { recipient: me._id, sender: requester._id, type: "follow_request" },
+      { type: "follow_rejected_by_me" }
+    );
+    
     res.json({ message: "Follow request rejected" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -238,7 +255,7 @@ router.get("/:userId", async (req, res) => {
 // CREATE or UPDATE profile
 router.post("/", requireAuth, async (req, res) => {
   try {
-    const { displayName, age, gender, skills, location, about, photo, userType, organizationName, verificationDocument, organizationId, isPrivate } = req.body;
+    const { displayName, age, gender, skills, location, about, photo, userType, organizationName, verificationDocument, organizationId, isPrivate, notificationRetentionDays } = req.body;
     let profile = await Profile.findOne({ user: req.user.id });
 
     // Only update fields that were explicitly sent (allows partial updates like photo removal)
@@ -255,6 +272,7 @@ router.post("/", requireAuth, async (req, res) => {
     if (verificationDocument !== undefined) updates.verificationDocument = verificationDocument;
     if (organizationId !== undefined) updates.organizationId = organizationId;
     if (isPrivate !== undefined) updates.isPrivate = isPrivate;
+    if (notificationRetentionDays !== undefined) updates.notificationRetentionDays = notificationRetentionDays;
 
     if (profile) {
       Object.assign(profile, updates);

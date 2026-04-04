@@ -197,7 +197,7 @@ function Navbar() {
         </div>
 
         <div className="g-nav-actions">
-          {effectiveUser.role === "user" && (
+          {effectiveUser.role === "user" && location.pathname !== "/register" && (
             <button 
               className="g-primary-btn" 
               onClick={() => navigate("/register")}
@@ -242,31 +242,37 @@ function Navbar() {
                         </div>
                         <div className="notif-content">
                           <p>
-                            <strong>{notification.sender?.username}</strong>{" "}
-                            {notification.type === "like" && "liked your post"}
-                            {notification.type === "message" && "sent you a message"}
-                            {notification.type === "follow" && "started following you"}
-                            {notification.type === "follow_accept" && "accepted your follow request"}
-                            {notification.type === "follow_request" && "requested to follow you"}
+                            {(() => {
+                              const actionState = pendingFollowActions[notification._id];
+                              const isAcc = actionState === "accept_done" || notification.type === "follow_accepted_by_me";
+                              const isRej = actionState === "reject_done" || notification.type === "follow_rejected_by_me";
+
+                              if (isAcc) {
+                                return <>You accepted <strong>{notification.sender?.username}</strong>'s follow request</>;
+                              }
+                              if (isRej) {
+                                return <>You declined <strong>{notification.sender?.username}</strong>'s follow request</>;
+                              }
+                              
+                              return (
+                                <>
+                                  <strong>{notification.sender?.username}</strong>{" "}
+                                  {notification.type === "like" && "liked your post"}
+                                  {notification.type === "message" && "sent you a message"}
+                                  {notification.type === "follow" && "started following you"}
+                                  {notification.type === "follow_accept" && "accepted your follow request"}
+                                  {notification.type === "follow_request" && "requested to follow you"}
+                                </>
+                              );
+                            })()}
                           </p>
                           <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
                           {notification.type === "follow_request" && (() => {
                             const actionState = pendingFollowActions[notification._id];
                             const isLoading = actionState?.endsWith("_loading");
                             const isDone = actionState?.endsWith("_done");
-                            const acceptedDone = actionState === "accept_done";
-                            const rejectedDone = actionState === "reject_done";
 
-                            if (isDone) {
-                              return (
-                                <div className="notif-follow-actions">
-                                  <span className={`notif-action-done ${acceptedDone ? "accepted" : "rejected"}`}>
-                                    <i className={`fi ${acceptedDone ? "fi-sr-user-check" : "fi-sr-user-minus"}`} />
-                                    {acceptedDone ? "Accepted" : "Declined"}
-                                  </span>
-                                </div>
-                              );
-                            }
+                            if (isDone) return null;
 
                             return (
                               <div className="notif-follow-actions">

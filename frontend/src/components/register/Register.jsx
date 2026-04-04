@@ -192,17 +192,17 @@ function Register() {
             <div className="reg-wizard-steps">
               <div className={`wizard-step ${step >= 1 ? "active" : ""}`}>
                 <div className="wizard-icon">1</div>
-                <span className="wizard-label">BASIC INFO</span>
+                <span className="wizard-label">ROLE INFO</span>
               </div>
               <div className={`wizard-line ${step >= 2 ? "active" : ""}`}></div>
               <div className={`wizard-step ${step >= 2 ? "active" : ""}`}>
                 <div className="wizard-icon">2</div>
-                <span className="wizard-label">ROLE DETAILS</span>
+                <span className="wizard-label">DETAILS</span>
               </div>
               <div className={`wizard-line ${step >= 3 ? "active" : ""}`}></div>
               <div className={`wizard-step ${step >= 3 ? "active" : ""}`}>
                 <div className="wizard-icon">3</div>
-                <span className="wizard-label">ACCOUNT SETUP</span>
+                <span className="wizard-label">ABOUT YOU</span>
               </div>
             </div>
           </div>
@@ -225,10 +225,10 @@ function Register() {
                 </div>
 
                 <div className="reg-field">
-                  <label>Location (City, State, Country) *</label>
+                  <label>Location *</label>
                   <input
                     type="text"
-                    placeholder="e.g. Varanasi, UP, India"
+                    placeholder="City, State"
                     {...register("location", { required: "Location is required" })}
                   />
                   {errors.location && <small>{errors.location.message}</small>}
@@ -251,10 +251,10 @@ function Register() {
                       {errors.organizationName && <small>{errors.organizationName.message}</small>}
                     </div>
                     <div className="reg-field">
-                      <label>Unique Organization ID *</label>
+                      <label>UniqueID *</label>
                       <input
                         type="text"
-                        placeholder="e.g. Registration number or Tax ID"
+                        placeholder=""
                         {...register("organizationId", { required: "Organization ID is required" })}
                       />
                       {errors.organizationId && <small>{errors.organizationId.message}</small>}
@@ -265,10 +265,12 @@ function Register() {
                         type="file"
                         accept="application/pdf"
                         id="ngoDocUpload"
+                        style={{ display: "none" }}
                         className="hidden-file"
                         onChange={(e) => {
                           const file = e.target.files[0];
                           if (file) {
+                            setValue("verificationDocumentFile", file.name);
                             const reader = new FileReader();
                             reader.onload = () => setValue("verificationDocument", reader.result);
                             reader.readAsDataURL(file);
@@ -276,30 +278,38 @@ function Register() {
                         }}
                       />
                       <div className="file-upload-wrapper">
-                        <label htmlFor="ngoDocUpload" className="upload-btn">Browse Files</label>
-                        {watch("verificationDocument") && <span className="file-attached">Document selected</span>}
+                        <label htmlFor="ngoDocUpload" className="upload-btn">Choose File</label>
+                        {!watch("verificationDocument") ? (
+                          <span className="file-placeholder">No file chosen</span>
+                        ) : null}
                       </div>
+                      {watch("verificationDocument") && (
+                        <div className="file-selected-text">
+                          Selected: {watch("verificationDocumentFile") || "document.pdf"}
+                        </div>
+                      )}
                       <input type="hidden" {...register("verificationDocument", { required: "Document is required" })} />
                       {errors.verificationDocument && <small>{errors.verificationDocument.message}</small>}
                     </div>
                   </>
                 ) : (
                   <>
+                    <div className="reg-field">
+                      <label>Full Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Your full name"
+                        {...register("name", { required: "Name is required" })}
+                      />
+                      {errors.name && <small>{errors.name.message}</small>}
+                    </div>
+
                     <div className="reg-row">
-                      <div className="reg-field">
-                        <label>Full Name *</label>
-                        <input
-                          type="text"
-                          placeholder="Your full name"
-                          {...register("name", { required: "Name is required" })}
-                        />
-                        {errors.name && <small>{errors.name.message}</small>}
-                      </div>
                       <div className="reg-field">
                         <label>Age *</label>
                         <input
                           type="number"
-                          placeholder="Age"
+                          placeholder="Your age"
                           {...register("age", {
                             required: "Age is required",
                             min: { value: 12, message: "Must be at least 12" },
@@ -308,8 +318,6 @@ function Register() {
                         />
                         {errors.age && <small>{errors.age.message}</small>}
                       </div>
-                    </div>
-                    <div className="reg-row">
                       <div className="reg-field">
                         <label>Gender *</label>
                         <select {...register("gender", { required: "Gender is required" })}>
@@ -321,54 +329,55 @@ function Register() {
                         </select>
                         {errors.gender && <small>{errors.gender.message}</small>}
                       </div>
-                      <div className="reg-field">
-                        <label>Skills * (Select multiple)</label>
-                        <div className="reg-multi-select">
-                          <div 
-                            className={`reg-multi-select-trigger ${skillsDropdownOpen ? "open" : ""}`}
-                            onClick={() => setSkillsDropdownOpen(!skillsDropdownOpen)}
-                          >
-                            <span>
-                              {selectedSkills.length > 0
-                                ? `${selectedSkills.length} skill${selectedSkills.length > 1 ? 's' : ''} selected`
-                                : "Select your skills..."}
-                            </span>
-                            <i className={`fi ${skillsDropdownOpen ? "fi-sr-caret-up" : "fi-sr-caret-down"}`} />
-                          </div>
-                          
-                          <div className={`reg-multi-select-dropdown ${skillsDropdownOpen ? "open" : ""}`}>
-                            {skillOptions.map((skill) => {
-                              const isSelected = selectedSkills.includes(skill);
-                              return (
-                                <div 
-                                  key={skill} 
-                                  className={`reg-multi-select-option ${isSelected ? "selected" : ""}`}
-                                  onClick={() => toggleSkill(skill)}
-                                >
-                                  <div className="reg-multi-cb">
-                                    <i className="fi fi-br-check" />
-                                  </div>
-                                  <span>{skill}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                    </div>
+
+                    <div className="reg-field">
+                      <label>Skills * (Select multiple)</label>
+                      <div className="reg-multi-select">
+                        <div 
+                          className={`reg-multi-select-trigger ${skillsDropdownOpen ? "open" : ""}`}
+                          onClick={() => setSkillsDropdownOpen(!skillsDropdownOpen)}
+                        >
+                          <span>
+                            {selectedSkills.length > 0
+                              ? `${selectedSkills.length} skill${selectedSkills.length > 1 ? 's' : ''} selected`
+                              : "Select your skills..."}
+                          </span>
+                          <i className={`fi ${skillsDropdownOpen ? "fi-sr-caret-up" : "fi-sr-caret-down"}`} />
                         </div>
-                        {/* Hidden input to maintain hook-form validation */}
-                        <select multiple hidden {...register("skills", { required: "Skills are required" })}>
-                          {skillOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                        {errors.skills && <small>{errors.skills.message}</small>}
+                        
+                        <div className={`reg-multi-select-dropdown ${skillsDropdownOpen ? "open" : ""}`}>
+                          {skillOptions.map((skill) => {
+                            const isSelected = selectedSkills.includes(skill);
+                            return (
+                              <div 
+                                key={skill} 
+                                className={`reg-multi-select-option ${isSelected ? "selected" : ""}`}
+                                onClick={() => toggleSkill(skill)}
+                              >
+                                <div className="reg-multi-cb">
+                                  <i className="fi fi-br-check" />
+                                </div>
+                                <span>{skill}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
+                      {/* Hidden input to maintain hook-form validation */}
+                      <select multiple hidden {...register("skills", { required: "Skills are required" })}>
+                        {skillOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                      {errors.skills && <small>{errors.skills.message}</small>}
+                    </div>
 
                       {watch("skills") && watch("skills").includes("Other") && (
                         <div className="reg-field" style={{ marginTop: "-10px" }}>
-                          <label>Specify Other Skill *</label>
-                          <input type="text" placeholder="e.g. Calligraphy" {...register("otherSkill", { required: "Please specify your skill" })} />
+                          <label>Please specify your skill *</label>
+                          <input type="text" placeholder="Enter your skill" {...register("otherSkill", { required: "Please specify your skill" })} />
                           {errors.otherSkill && <small>{errors.otherSkill.message}</small>}
                         </div>
                       )}
-                    </div>
                   </>
                 )}
               </div>
@@ -378,16 +387,33 @@ function Register() {
             {step === 3 && (
               <div className="wizard-panel">
                 <div className="reg-field">
-                  <label>About You / Organization *</label>
+                  <label>About You *</label>
                   <textarea
-                    placeholder="Tell the community about your cultural journey, your craft, and what inspires you."
+                    placeholder=""
                     rows={4}
                     {...register("about", { required: "Please write an about section" })}
                   />
                   {errors.about && <small>{errors.about.message}</small>}
                 </div>
                 <div className="reg-field">
-                  <label>Profile Photo <span className="opt-label">(optional)</span></label>
+                  <label>Profile Photo</label>
+                  <div className="photo-upload-row">
+                    <div className="photo-upload-preview">
+                      {watch("photo") ? (
+                        <img src={watch("photo")} alt="Preview" className="photo-preview-circle" />
+                      ) : (
+                        <div className="photo-preview-placeholder">
+                          <i className="fi fi-sr-user" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="photo-upload-actions">
+                      <label htmlFor="profilePhotoUpload" className="photo-upload-btn">Browse from device</label>
+                      {watch("photo") && (
+                        <button type="button" className="photo-remove-btn" onClick={() => setValue("photo", null)}>Remove</button>
+                      )}
+                    </div>
+                  </div>
                   <input
                     type="file"
                     accept="image/*"
@@ -408,16 +434,13 @@ function Register() {
                       e.target.value = null;
                     }}
                   />
-                  <div className="file-upload-wrapper">
-                    <label htmlFor="profilePhotoUpload" className="upload-btn">Browse Files</label>
-                    {watch("photo") && <img src={watch("photo")} alt="Preview" className="photo-preview-sm" />}
-                  </div>
                 </div>
-                <div className="reg-field toggle-field">
-                  <label>
-                    <input type="checkbox" {...register("isPrivate")} />
-                    Make profile private (only visible to followers)
-                  </label>
+                <div className="reg-field">
+                  <label>Profile Privacy *</label>
+                  <select {...register("isPrivate")}>
+                    <option value={false}>Public</option>
+                    <option value={true}>Private</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -430,11 +453,11 @@ function Register() {
               )}
               {step < 3 ? (
                 <button type="button" className="reg-submit" onClick={handleNextStep}>
-                  Next Step
+                  Next
                 </button>
               ) : (
                 <button type="submit" className="reg-submit" disabled={loading}>
-                  {loading ? "Creating Profile..." : "Complete Registration"}
+                  {loading ? "Creating Profile..." : "Complete Setup"}
                 </button>
               )}
             </div>

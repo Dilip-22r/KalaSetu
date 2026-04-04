@@ -11,17 +11,17 @@ const API = "http://localhost:5000";
 function MessageTick({ status }) {
   if (status === "seen") {
     return (
-      <span className="msg-tick seen" title="Seen">
+      <span className="msg-tick seen" title="Seen" style={{ display: "inline-flex", alignItems: "center" }}>
         <i className="fi fi-sr-check" />
-        <i className="fi fi-sr-check" />
+        <i className="fi fi-sr-check" style={{ marginLeft: "-6px" }} />
       </span>
     );
   }
   if (status === "delivered") {
     return (
-      <span className="msg-tick delivered" title="Delivered">
+      <span className="msg-tick delivered" title="Delivered" style={{ display: "inline-flex", alignItems: "center" }}>
         <i className="fi fi-sr-check" />
-        <i className="fi fi-sr-check" />
+        <i className="fi fi-sr-check" style={{ marginLeft: "-6px" }} />
       </span>
     );
   }
@@ -52,11 +52,14 @@ function Messages() {
   const [msgMenuId, setMsgMenuId] = useState(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [notification, setNotification] = useState(null);
+  // local unread count map: { [partnerId]: number } — updated in real time
+  const [unreadMap, setUnreadMap] = useState({});
 
   const { onlineUsers, socket } = useAuthStore();
   const {
     messages,
     setMessages,
+    addMessage,
     setSelectedUserId,
     subscribeToMessages,
     unsubscribeFromMessages,
@@ -88,6 +91,13 @@ function Messages() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setConversations(res.data);
+      // Sync unread map from backend counts (source of truth)
+      const map = {};
+      for (const conv of res.data) {
+        const pid = conv.partner._id?.toString();
+        if (pid) map[pid] = conv.unreadCount || 0;
+      }
+      setUnreadMap(map);
     } catch {
       setConversations([]);
     }
@@ -96,6 +106,9 @@ function Messages() {
 
   const openConversation = useCallback(async (uid) => {
     if (!uid || !token || !user || user.role === "user") return;
+
+    // Clear unread badge immediately when opening
+    setUnreadMap((prev) => ({ ...prev, [uid]: 0 }));
 
     navigate(`/messages/${uid}`, { replace: true });
     try {
@@ -155,10 +168,12 @@ function Messages() {
     if (!socket || !user || user.role === "user") return undefined;
 
     const handleNew = (msg) => {
-      const senderId = msg.sender?._id ?? msg.sender;
+      const senderId = String(msg.sender?._id ?? msg.sender);
       if (senderId !== activeUserId) {
         const senderName = msg.sender?.fullName || msg.sender?.username || "Someone";
         showNotification(`New message from ${senderName}`);
+        // Increment unread badge for that partner in real-time
+        setUnreadMap((prev) => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
       }
       fetchConversations();
     };
@@ -192,7 +207,7 @@ function Messages() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessages([...messages, res.data]);
+      addMessage(res.data);
       setText("");
       setReplyTo(null);
       fetchConversations();
@@ -389,11 +404,12 @@ function Messages() {
                 const partnerId = conv.partner._id?.toString() ?? conv.partner._id;
                 const isActive = activeUserId === partnerId || activeUserId === conv.partner._id;
                 const isOnline = onlineUsers.includes(partnerId);
+                const unread = isActive ? 0 : (unreadMap[partnerId] || 0);
 
                 return (
                   <div
                     key={partnerId}
-                    className={`msg-conv-item ${isActive ? "active" : ""}`}
+                    className={`msg-conv-item ${isActive ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
                     onClick={() => {
                       setActiveUser(conv.partner);
                       setActiveUserId(partnerId);
@@ -410,8 +426,10 @@ function Messages() {
                       {isOnline && <span className="msg-online-dot"></span>}
                     </div>
                     <div className="msg-conv-info">
-                      <div className="msg-conv-name">{conv.partner.fullName || conv.partner.username || "Unknown"}</div>
-                      <div className="msg-conv-last">
+                      <div className={`msg-conv-name ${unread > 0 ? "unread" : ""}`}>
+                        {conv.partner.fullName || conv.partner.username || "Unknown"}
+                      </div>
+                      <div className={`msg-conv-last ${unread > 0 ? "unread" : ""}`}>
                         {conv.lastMessage?.deleted
                           ? "Message deleted"
                           : conv.lastMessage?.sharedPost
@@ -423,7 +441,12 @@ function Messages() {
                               : "No messages yet"}
                       </div>
                     </div>
-                    <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
+                    <div className="msg-conv-meta">
+                      <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
+                      {unread > 0 && (
+                        <span className="msg-unread-badge">{unread > 99 ? "99+" : unread}</span>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -606,7 +629,7 @@ function Messages() {
                             { receiverId: activeUserId, text: "Shared an image", image: base64 },
                             { headers: { Authorization: `Bearer ${token}` } }
                           );
-                          setMessages([...messages, res.data]);
+                          addMessage(res.data);
                           fetchConversations();
                         } catch {
                           showNotification("Failed to send image");

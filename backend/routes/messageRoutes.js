@@ -19,6 +19,29 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 20);
 
+    // First: count unread messages per partner outside the main pipeline for accuracy
+    const unreadPipeline = [
+      {
+        $match: {
+          receiver: userIdObj,
+          status: { $ne: "seen" },
+          deleted: { $ne: true },
+          hiddenFor: { $ne: userIdObj },
+        },
+      },
+      {
+        $group: {
+          _id: "$sender",
+          unreadCount: { $sum: 1 },
+        },
+      },
+    ];
+    const unreadRaw = await Message.aggregate(unreadPipeline);
+    const unreadMap = {};
+    for (const row of unreadRaw) {
+      unreadMap[row._id.toString()] = row.unreadCount;
+    }
+
     const pipeline = [
       {
         $match: {
@@ -82,7 +105,8 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
     // Format final response to handle any missing profile photos safely
     const formatted = conversations.map(c => ({
       partner: { ...c.partner, photo: c.partner.photo || "" },
-      lastMessage: c.lastMessage
+      lastMessage: c.lastMessage,
+      unreadCount: unreadMap[c._id.toString()] || 0,
     }));
 
     res.json(formatted);

@@ -4,7 +4,8 @@ import axios from "axios";
 import "./Search.css";
 import Navbar from "../components/common/Navbar";
 import { useAuthStore } from "../store/useAuthStore";
-
+import { PostCard } from "../components/home/Home";
+import "../components/home/Home.css";
 const API = "http://localhost:5000";
 
 function Search() {
@@ -18,6 +19,95 @@ function Search() {
   const [results, setResults] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Likes and Actions state
+  const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likers, setLikers] = useState([]);
+  const [loadingLikes, setLoadingLikes] = useState(false);
+
+  const handleLikesClick = async (postId, likesCount) => {
+    if (likesCount === 0) return;
+    setLikesModalPostId(postId);
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/likes`);
+      setLikers(res.data);
+    } catch {
+      setLikers([]);
+    }
+    setLoadingLikes(false);
+  };
+
+  const handleLike = async (postId) => {
+    if (!user) return;
+    const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+
+    setPosts(
+      posts.map((post) => {
+        if (post._id !== postId) return post;
+        const isLiked = post.likes.includes(user._id);
+        const updatedLikes = isLiked
+          ? post.likes.filter((id) => id !== user._id)
+          : [...post.likes, user._id];
+          
+        const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
+          ? post.dislikes.filter((id) => id !== user._id)
+          : post.dislikes || [];
+          
+        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
+      })
+    );
+
+    try {
+      await axios.put(
+        `${API}/posts/${postId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch {
+      setPosts(previousPosts);
+    }
+  };
+
+  const handleDislike = async (postId) => {
+    if (!user) return;
+    const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isDisliked = post.dislikes?.includes(user._id);
+      const updatedDislikes = isDisliked
+        ? (post.dislikes || []).filter((id) => id !== user._id)
+        : [...(post.dislikes || []), user._id];
+        
+      const updatedLikes = !isDisliked && post.likes?.includes(user._id)
+        ? post.likes.filter((id) => id !== user._id)
+        : post.likes || [];
+        
+      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
+
+  const handleRepost = async (postId) => {
+    if (!user) return;
+    const token = localStorage.getItem("token");
+    const previousPosts = [...posts];
+    setPosts(posts.map((post) => {
+      if (post._id !== postId) return post;
+      const isReposted = post.reposts?.includes(user._id);
+      const updatedReposts = isReposted
+        ? (post.reposts || []).filter((id) => id !== user._id)
+        : [...(post.reposts || []), user._id];
+      return { ...post, reposts: updatedReposts };
+    }));
+    try {
+      await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { setPosts(previousPosts); }
+  };
 
   const fetchCreators = useCallback(async () => {
     setLoading(true);
@@ -154,26 +244,62 @@ function Search() {
             <p>No posts found</p>
           </div>
         ) : (
-          <div className="s-posts">
-            {posts.map((post) => (
-              <div key={post._id} className="s-post-card">
-                {post.image && <img src={post.image} alt="" className="s-post-img" />}
-                <div className="s-post-body">
-                  <span className="s-post-cat">{post.category}</span>
-                  <h3>{post.title}</h3>
-                  <p>{post.content}</p>
-                  <div className="s-post-meta">
-                    <span className="s-post-author" onClick={() => navigate(`/profile/${post.author?._id}`)}>
-                      by {post.author?.fullName}
-                    </span>
-                    <span className="s-post-likes"><i className="fi fi-sr-heart" /> {post.likes?.length || 0}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="explore-feed" style={{ maxWidth: "550px", margin: "0 auto", padding: "20px 0" }}>
+            <div className="posts-grid">
+              {posts.map((post) => (
+                <PostCard
+                  key={post._id}
+                  post={post}
+                  currentUser={user}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onRepost={handleRepost}
+                  onShowLikes={handleLikesClick}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
+      {/* ─── Likes Modal ──────────────────────────────────── */}
+      {likesModalPostId && (
+        <div className="likes-modal-overlay" onClick={() => setLikesModalPostId(null)}>
+          <div className="likes-modal-content" onClick={(event) => event.stopPropagation()}>
+            <div className="likes-modal-header">
+              <h3>Likes</h3>
+              <button className="close-modal-btn" onClick={() => setLikesModalPostId(null)}>
+                ✕
+              </button>
+            </div>
+            <div className="likes-modal-body">
+              {loadingLikes ? (
+                <div style={{ padding: "24px", textAlign: "center" }}>
+                  <div className="spinner" />
+                </div>
+              ) : (
+                <div className="likers-list">
+                  {likers.map((liker) => (
+                    <div
+                      key={liker._id}
+                      className="liker-item"
+                      onClick={() => {
+                        setLikesModalPostId(null);
+                        navigate(`/profile/${liker._id}`);
+                      }}
+                    >
+                      <div className="liker-avatar">{liker.username?.[0]?.toUpperCase()}</div>
+                      <div className="liker-info">
+                        <span className="liker-username">{liker.username}</span>
+                        <span className="liker-fullname">{liker.fullName}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

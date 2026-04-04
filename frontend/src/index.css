@@ -33,7 +33,7 @@
 
 html {
   background: var(--surface-base);
-  overflow-y: scroll;
+  overscroll-behavior-y: none; /* Helps prevent pull-to-refresh jump on mobile */
 }
 
 body {
@@ -73,4 +73,9 @@ a {
 
 .display-serif {
   font-family: "Fraunces", Georgia, serif;
+}
+
+/* Utility to lock background scroll when modals/overlays are open */
+body.modal-open {
+  overflow: hidden;
 }

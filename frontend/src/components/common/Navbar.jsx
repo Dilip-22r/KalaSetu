@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../store/useNotificationStore";
+import axios from "axios";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./Navbar.css";
 
@@ -20,7 +21,11 @@ function Navbar() {
   const page = useNotificationStore((state) => state.page);
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [pendingFollowActions, setPendingFollowActions] = useState({}); // { notifId: "accept"|"reject"|"done" }
   const dropdownRef = useRef(null);
+  const profileRef = useRef(null);
   const initializedUserIdRef = useRef(null);
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const effectiveUser = authUser ?? storedUser;
@@ -32,10 +37,31 @@ function Navbar() {
     }
   }, [authUser, setAuthUser, storedUser]);
 
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  
+  useEffect(() => {
+    if (!effectiveUser?._id) return;
+    axios.get(`http://localhost:5000/profiles/${effectiveUser._id}`)
+      .then(res => {
+         if (res.data?.photo) setProfilePhoto(res.data.photo);
+      })
+      .catch(() => {}); // silently fail if no profile yet
+  }, [effectiveUser?._id]);
+
   const initializeNotifications = useCallback(() => {
     fetchNotifications(1);
     subscribeToNotifications();
   }, [fetchNotifications, subscribeToNotifications]);
+
+  // Also fetch fresh unread count whenever user navigates back
+  useEffect(() => {
+    if (!effectiveUser?._id) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    // Always refresh count on mount so badge is accurate
+    fetchNotifications(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!effectiveUser?._id) return;
@@ -55,6 +81,9 @@ function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -68,9 +97,38 @@ function Navbar() {
     }
   };
 
-  const handleLogout = () => {
+  const handleFollowRequest = async (e, senderId, notifId, action) => {
+    e.stopPropagation();
+    const token = localStorage.getItem("token");
+    const me = JSON.parse(localStorage.getItem("user") || "null");
+    if (!token || !me) return;
+    // Mark as loading
+    setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_loading" }));
+    try {
+      await axios.put(
+        `http://localhost:5000/profiles/${senderId}/${action}-follow`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Mark as done with which action was taken
+      setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_done" }));
+      // Refresh notification list after short delay to show done state
+      setTimeout(() => fetchNotifications(1), 800);
+    } catch (err) {
+      console.error(`Follow ${action} failed`, err);
+      setPendingFollowActions((prev) => { const s = { ...prev }; delete s[notifId]; return s; });
+    }
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+    setShowProfileMenu(false);
+  };
+
+  const confirmLogout = () => {
     localStorage.clear();
     setAuthUser(null);
+    setShowLogoutConfirm(false);
     navigate("/");
   };
 
@@ -85,7 +143,6 @@ function Navbar() {
         <div className="g-brand" onClick={() => navigate("/")}>
           <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
           <div className="g-brand-copy">
-            <span className="g-brand-kicker">Cultural network</span>
             <h1 className="display-serif">KalaSetu</h1>
           </div>
         </div>
@@ -103,11 +160,11 @@ function Navbar() {
   }
 
   return (
-    <nav className="g-navbar">
+    <>
+      <nav className="g-navbar">
       <div className="g-brand" onClick={() => navigate("/home")}>
         <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
         <div className="g-brand-copy">
-          <span className="g-brand-kicker">Cultural network</span>
           <h1 className="display-serif">KalaSetu</h1>
         </div>
       </div>
@@ -140,6 +197,15 @@ function Navbar() {
         </div>
 
         <div className="g-nav-actions">
+          {effectiveUser.role === "user" && (
+            <button 
+              className="g-primary-btn" 
+              onClick={() => navigate("/register")}
+              style={{ fontSize: '13px', padding: '8px 16px', marginRight: '8px' }}
+            >
+              Register as Artisan / NGO
+            </button>
+          )}
           <div className="g-notif-wrapper" ref={dropdownRef}>
             <button className="g-alert-btn" onClick={handleBellClick}>
               <i className="fi fi-sr-bell" />
@@ -164,9 +230,12 @@ function Navbar() {
                           if (notification.type === "message") {
                             navigate(`/messages/${notification.sender?._id}`);
                             setShowNotifications(false);
+                          } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
+                            navigate(`/profile/${notification.sender?._id}`);
+                            setShowNotifications(false);
                           }
                         }}
-                        style={{ cursor: notification.type === "message" ? "pointer" : "default" }}
+                        style={{ cursor: "pointer" }}
                       >
                         <div className="notif-avatar">
                           {notification.sender?.username?.[0]?.toUpperCase()}
@@ -174,9 +243,58 @@ function Navbar() {
                         <div className="notif-content">
                           <p>
                             <strong>{notification.sender?.username}</strong>{" "}
-                            {notification.type === "like" ? "liked your post" : "sent you a message"}
+                            {notification.type === "like" && "liked your post"}
+                            {notification.type === "message" && "sent you a message"}
+                            {notification.type === "follow" && "started following you"}
+                            {notification.type === "follow_accept" && "accepted your follow request"}
+                            {notification.type === "follow_request" && "requested to follow you"}
                           </p>
                           <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                          {notification.type === "follow_request" && (() => {
+                            const actionState = pendingFollowActions[notification._id];
+                            const isLoading = actionState?.endsWith("_loading");
+                            const isDone = actionState?.endsWith("_done");
+                            const acceptedDone = actionState === "accept_done";
+                            const rejectedDone = actionState === "reject_done";
+
+                            if (isDone) {
+                              return (
+                                <div className="notif-follow-actions">
+                                  <span className={`notif-action-done ${acceptedDone ? "accepted" : "rejected"}`}>
+                                    <i className={`fi ${acceptedDone ? "fi-sr-user-check" : "fi-sr-user-minus"}`} />
+                                    {acceptedDone ? "Accepted" : "Declined"}
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="notif-follow-actions">
+                                <button
+                                  className="notif-accept-btn"
+                                  disabled={isLoading}
+                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "accept")}
+                                >
+                                  {actionState === "accept_loading" ? (
+                                    <span className="notif-btn-spinner" />
+                                  ) : (
+                                    <><i className="fi fi-sr-user-check" /> Accept</>
+                                  )}
+                                </button>
+                                <button
+                                  className="notif-reject-btn"
+                                  disabled={isLoading}
+                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "reject")}
+                                >
+                                  {actionState === "reject_loading" ? (
+                                    <span className="notif-btn-spinner" />
+                                  ) : (
+                                    <><i className="fi fi-sr-user-minus" /> Decline</>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
@@ -191,39 +309,56 @@ function Navbar() {
             )}
           </div>
 
-          {effectiveUser.role === "user" ? (
-            <button className="g-primary-btn" onClick={() => navigate("/register")}>
-              <i className="fi fi-sr-sparkles" />
-              Become an Artisan
-            </button>
-          ) : (
+          <div className="g-profile-wrapper" ref={profileRef}>
             <button
-              className={`g-primary-btn ${isActivePath("/create-post") ? "is-active" : ""}`}
-              onClick={() => navigate("/create-post")}
+              className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
+              onClick={() => setShowProfileMenu((v) => !v)}
             >
-              <i className="fi fi-sr-sparkles" />
-              Create Post
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" className="g-profile-avatar-img" />
+              ) : (
+                <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+              )}
+              <span className="g-profile-copy">
+                <strong>{effectiveUser.username}</strong>
+              </span>
             </button>
-          )}
-
-          <button
-            className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
-            onClick={() => navigate(`/profile/${effectiveUser._id}`)}
-          >
-            <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
-            <span className="g-profile-copy">
-              <strong>{effectiveUser.username}</strong>
-              <small>{effectiveUser.role === "ngo" ? "NGO" : effectiveUser.role === "artisan" ? "Artisan" : "Member"}</small>
-            </span>
-          </button>
-
-          <button className="g-ghost-btn" onClick={handleLogout}>
-            <i className="fi fi-sr-sign-out-alt" />
-            Logout
-          </button>
+            {showProfileMenu && (
+              <div className="g-profile-dropdown">
+                <div className="g-profile-menu-item" onClick={() => { navigate(`/profile/${effectiveUser._id}`); setShowProfileMenu(false); }}>
+                  <i className="fi fi-sr-user" /> View Profile
+                </div>
+                <div className="g-profile-menu-divider" />
+                <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
+                  <i className="fi fi-sr-sign-out-alt" /> Logout
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>
+      
+      {showLogoutConfirm && (
+        <div className="g-modal-overlay nav-modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="g-modal-content nav-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="g-modal-icon">
+              <i className="fi fi-sr-sign-out-alt" />
+            </div>
+            <h3 className="display-serif">Sign out of KalaSetu?</h3>
+            <p>You will need to sign back in to access your account.</p>
+            <div className="nav-modal-actions">
+              <button className="g-modal-cancel" onClick={() => setShowLogoutConfirm(false)}>
+                Cancel
+              </button>
+              <button className="g-modal-confirm" onClick={confirmLogout}>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

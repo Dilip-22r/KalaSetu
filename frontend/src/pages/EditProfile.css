@@ -1,11 +1,7 @@
 .ep-shell {
-  max-width: 100%;
-  margin: 0;
+  max-width: 720px;
+  margin: 0 auto;
   padding: 34px 40px 64px;
-  display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
-  gap: 24px;
-  align-items: start;
 }
 
 .ep-intro,

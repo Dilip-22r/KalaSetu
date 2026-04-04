@@ -5,10 +5,9 @@ import jwt from "jsonwebtoken";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import { Notification } from "../models/Notification.js";
+import { Post } from "../models/Post.js";
 
 const router = express.Router();
-
-
 
 // GET conversations
 router.get("/conversations", requireAuth, requireRole, async (req, res) => {
@@ -104,6 +103,12 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
     })
       .populate("sender", "username fullName")
       .populate("replyTo", "text sender")
+      .populate({
+        path: "sharedPost",
+        populate: [
+          { path: "author", select: "username fullName photo" }
+        ]
+      })
       .sort({ createdAt: 1 });
 
     await Message.updateMany(
@@ -123,7 +128,7 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 // SEND message
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {
-    const { receiverId, text, replyTo } = req.body;
+    const { receiverId, text, replyTo, sharedPostId, image } = req.body;
     const receiverSocketId = getReceiverSocketId(receiverId);
     const initialStatus = receiverSocketId ? "delivered" : "sent";
 
@@ -133,11 +138,19 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
       text,
       status: initialStatus,
       replyTo: replyTo || null,
+      sharedPost: sharedPostId || null,
+      image: image || "",
     });
     await msg.save();
     const populated = await msg.populate([
       { path: "sender", select: "username fullName" },
       { path: "replyTo", select: "text sender" },
+      { 
+        path: "sharedPost", 
+        populate: [
+          { path: "author", select: "username fullName photo" }
+        ]
+      },
     ]);
 
     if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populated);

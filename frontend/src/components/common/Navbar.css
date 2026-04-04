@@ -134,6 +134,7 @@
 
 .g-alert-btn {
   position: relative;
+  overflow: visible !important;
 }
 
 .g-profile-btn {
@@ -493,4 +494,97 @@
 }
 .g-modal-confirm:hover {
   background: #a93226;
+}
+
+/* ---- Follow Request Action Buttons in Notification Cards ---- */
+.notif-follow-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.notif-accept-btn,
+.notif-reject-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+  min-width: 80px;
+  justify-content: center;
+}
+
+/* Teal — Accept */
+.notif-accept-btn {
+  background: linear-gradient(135deg, #2f6f6d, #4a8b8f);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(47, 111, 109, 0.3);
+}
+.notif-accept-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #256260, #3d7b7f);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(47, 111, 109, 0.4);
+}
+.notif-accept-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Terra — Decline */
+.notif-reject-btn {
+  background: linear-gradient(135deg, #b85c38, #d4754e);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(184, 92, 56, 0.28);
+}
+.notif-reject-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a04e2e, #c06640);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(184, 92, 56, 0.38);
+}
+.notif-reject-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Spinner inside buttons during loading */
+.notif-btn-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: notif-spin 0.6s linear infinite;
+}
+
+@keyframes notif-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Done state — shown after action taken */
+.notif-action-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.notif-action-done.accepted {
+  background: rgba(47, 111, 109, 0.12);
+  color: #2f6f6d;
+}
+.notif-action-done.rejected {
+  background: rgba(184, 92, 56, 0.1);
+  color: #b85c38;
 }

@@ -23,6 +23,7 @@ function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [pendingFollowActions, setPendingFollowActions] = useState({}); // { notifId: "accept"|"reject"|"done" }
   const dropdownRef = useRef(null);
   const profileRef = useRef(null);
   const initializedUserIdRef = useRef(null);
@@ -51,6 +52,16 @@ function Navbar() {
     fetchNotifications(1);
     subscribeToNotifications();
   }, [fetchNotifications, subscribeToNotifications]);
+
+  // Also fetch fresh unread count whenever user navigates back
+  useEffect(() => {
+    if (!effectiveUser?._id) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    // Always refresh count on mount so badge is accurate
+    fetchNotifications(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!effectiveUser?._id) return;
@@ -83,6 +94,29 @@ function Navbar() {
     setShowNotifications((value) => !value);
     if (!showNotifications && unreadCount > 0) {
       markAsRead();
+    }
+  };
+
+  const handleFollowRequest = async (e, senderId, notifId, action) => {
+    e.stopPropagation();
+    const token = localStorage.getItem("token");
+    const me = JSON.parse(localStorage.getItem("user") || "null");
+    if (!token || !me) return;
+    // Mark as loading
+    setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_loading" }));
+    try {
+      await axios.put(
+        `http://localhost:5000/profiles/${senderId}/${action}-follow`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Mark as done with which action was taken
+      setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_done" }));
+      // Refresh notification list after short delay to show done state
+      setTimeout(() => fetchNotifications(1), 800);
+    } catch (err) {
+      console.error(`Follow ${action} failed`, err);
+      setPendingFollowActions((prev) => { const s = { ...prev }; delete s[notifId]; return s; });
     }
   };
 
@@ -196,9 +230,12 @@ function Navbar() {
                           if (notification.type === "message") {
                             navigate(`/messages/${notification.sender?._id}`);
                             setShowNotifications(false);
+                          } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
+                            navigate(`/profile/${notification.sender?._id}`);
+                            setShowNotifications(false);
                           }
                         }}
-                        style={{ cursor: notification.type === "message" ? "pointer" : "default" }}
+                        style={{ cursor: "pointer" }}
                       >
                         <div className="notif-avatar">
                           {notification.sender?.username?.[0]?.toUpperCase()}
@@ -206,9 +243,58 @@ function Navbar() {
                         <div className="notif-content">
                           <p>
                             <strong>{notification.sender?.username}</strong>{" "}
-                            {notification.type === "like" ? "liked your post" : "sent you a message"}
+                            {notification.type === "like" && "liked your post"}
+                            {notification.type === "message" && "sent you a message"}
+                            {notification.type === "follow" && "started following you"}
+                            {notification.type === "follow_accept" && "accepted your follow request"}
+                            {notification.type === "follow_request" && "requested to follow you"}
                           </p>
                           <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                          {notification.type === "follow_request" && (() => {
+                            const actionState = pendingFollowActions[notification._id];
+                            const isLoading = actionState?.endsWith("_loading");
+                            const isDone = actionState?.endsWith("_done");
+                            const acceptedDone = actionState === "accept_done";
+                            const rejectedDone = actionState === "reject_done";
+
+                            if (isDone) {
+                              return (
+                                <div className="notif-follow-actions">
+                                  <span className={`notif-action-done ${acceptedDone ? "accepted" : "rejected"}`}>
+                                    <i className={`fi ${acceptedDone ? "fi-sr-user-check" : "fi-sr-user-minus"}`} />
+                                    {acceptedDone ? "Accepted" : "Declined"}
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="notif-follow-actions">
+                                <button
+                                  className="notif-accept-btn"
+                                  disabled={isLoading}
+                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "accept")}
+                                >
+                                  {actionState === "accept_loading" ? (
+                                    <span className="notif-btn-spinner" />
+                                  ) : (
+                                    <><i className="fi fi-sr-user-check" /> Accept</>
+                                  )}
+                                </button>
+                                <button
+                                  className="notif-reject-btn"
+                                  disabled={isLoading}
+                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "reject")}
+                                >
+                                  {actionState === "reject_loading" ? (
+                                    <span className="notif-btn-spinner" />
+                                  ) : (
+                                    <><i className="fi fi-sr-user-minus" /> Decline</>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}

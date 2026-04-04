@@ -1092,3 +1092,82 @@
     text-align: center;
   }
 }
+
+/* ---- Clickable Followers Stat Card ---- */
+.prof-stat-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.prof-stat-clickable:hover {
+  background: linear-gradient(180deg, rgba(167, 196, 188, 0.3), rgba(167, 196, 188, 0.15)) !important;
+  border-color: rgba(47, 111, 109, 0.22) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(47, 111, 109, 0.12) !important;
+}
+.prof-stat-clickable:hover .prof-stat-icon {
+  background: rgba(47, 111, 109, 0.18);
+}
+
+/* ---- Followers Modal Specifics ---- */
+.prof-followers-modal {
+  max-height: min(520px, 80vh);
+  display: flex;
+  flex-direction: column;
+}
+
+.prof-followers-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(47, 111, 109, 0.12);
+  color: var(--brand-700);
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* Lock screen for private profiles */
+.prof-followers-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  text-align: center;
+  gap: 14px;
+}
+
+.prof-followers-lock-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(184, 92, 56, 0.1);
+  color: #b85c38;
+  font-size: 24px;
+}
+
+.prof-followers-locked p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* Avatar image inside followers list */
+.prof-follower-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}

@@ -131,7 +131,7 @@ function Search() {
       if (search) params.search = search;
       if (typeFilter) params.category = typeFilter;
       const res = await axios.get(`${API}/posts`, { params });
-      setPosts(res.data);
+      setPosts(res.data.posts || []);
     } catch {
       setPosts([]);
     }

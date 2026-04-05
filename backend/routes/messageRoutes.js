@@ -167,8 +167,14 @@ router.get("/conversations", requireAuth, requireRole, async (req, res, next) =>
 router.get("/:userId", requireAuth, requireRole, async (req, res, next) => {
   try {
     // Block guard — if either side has blocked, deny reading history too
-    const { isBlocked } = await getBlockStatus(req.user.id, req.params.userId);
-    if (isBlocked) {
+    const block = await Block.findOne({
+      $or: [
+        { blocker: req.user.id, blocked: req.params.userId },
+        { blocker: req.params.userId, blocked: req.user.id },
+      ],
+    }).lean();
+
+    if (block) {
       // Return empty array — don't reveal block direction
       return res.json([]);
     }

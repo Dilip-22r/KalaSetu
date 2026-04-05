@@ -373,7 +373,10 @@ function Home() {
       const params = {};
       if (search) params.search = search;
       if (category) params.category = category;
-      const res = await axios.get(`${API}/posts`, { params });
+      const token = localStorage.getItem("token");
+      // Pass auth token so the backend can filter out blocked users' posts
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/posts`, { params, headers });
       setPosts(res.data);
     } catch {
       setPosts([]);

@@ -1,13 +1,27 @@
 import express from "express";
 import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
+import { Block } from "../models/Block.js";
 import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
 import { Notification } from "../models/Notification.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
 
-// GET all posts (public) with optional search
+// ─── Helper: get all user IDs the current user should not see ─────────────────
+async function getBlockedUserIds(userId) {
+  if (!userId) return [];
+  const blocks = await Block.find({
+    $or: [{ blocker: userId }, { blocked: userId }],
+  })
+    .select("blocker blocked")
+    .lean();
+  return blocks.map((b) =>
+    String(b.blocker) === String(userId) ? String(b.blocked) : String(b.blocker)
+  );
+}
+
+// ─── GET all posts — block-aware feed ─────────────────────────────────────────
 router.get("/", optionalAuth, async (req, res) => {
   try {
     const { search, category } = req.query;
@@ -20,30 +34,55 @@ router.get("/", optionalAuth, async (req, res) => {
         { tags: { $in: [new RegExp(search, "i")] } },
       ];
     }
+
+    // If logged in, hide posts from blocked users (both directions)
+    if (req.user?.id) {
+      const blockedIds = await getBlockedUserIds(req.user.id);
+      if (blockedIds.length > 0) {
+        filter.author = { $nin: blockedIds };
+      }
+    }
+
     const posts = await Post.find(filter)
       .populate("author", "username fullName role")
       .sort({ createdAt: -1 });
+
     res.json(posts);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// GET single post
-router.get("/:id", async (req, res) => {
+// ─── GET single post ───────────────────────────────────────────────────────────
+router.get("/:id", optionalAuth, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate("author", "username fullName role");
+    const post = await Post.findById(req.params.id).populate(
+      "author",
+      "username fullName role"
+    );
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Block check: neither party should be able to fetch the other's post by ID
+    if (req.user?.id) {
+      const blockedIds = await getBlockedUserIds(req.user.id);
+      if (blockedIds.includes(String(post.author._id))) {
+        return res.status(403).json({ message: "Post not available." });
+      }
+    }
+
     res.json(post);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// GET post likers
+// ─── GET post likers ───────────────────────────────────────────────────────────
 router.get("/:id/likes", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate("likes", "username fullName profilePic");
+    const post = await Post.findById(req.params.id).populate(
+      "likes",
+      "username fullName"
+    );
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post.likes);
   } catch (err) {
@@ -51,7 +90,7 @@ router.get("/:id/likes", async (req, res) => {
   }
 });
 
-// CREATE post (artisan/ngo only)
+// ─── CREATE post ──────────────────────────────────────────────────────────────
 router.post("/", requireAuth, requireRole, async (req, res) => {
   try {
     const { title, content, category, tags, image } = req.body;
@@ -71,7 +110,7 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
   }
 });
 
-// DELETE post (author only)
+// ─── DELETE post ──────────────────────────────────────────────────────────────
 router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -86,14 +125,21 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// LIKE/UNLIKE post
+// ─── LIKE / UNLIKE post — block-aware ────────────────────────────────────────
 router.put("/:id/like", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // Prevent liking if either party has blocked the other
+    const blockedIds = await getBlockedUserIds(req.user.id);
+    if (blockedIds.includes(String(post.author))) {
+      return res.status(403).json({ message: "Action not available." });
+    }
+
     const idx = post.likes.indexOf(req.user.id);
     const dislikeIdx = post.dislikes?.indexOf(req.user.id);
-    
+
     if (idx === -1) {
       post.likes.push(req.user.id);
       if (dislikeIdx !== undefined && dislikeIdx !== -1) {
@@ -101,7 +147,6 @@ router.put("/:id/like", requireAuth, async (req, res) => {
       }
       await post.save();
 
-      // Send Notification
       if (post.author.toString() !== req.user.id) {
         const existing = await Notification.findOne({
           recipient: post.author,
@@ -109,7 +154,6 @@ router.put("/:id/like", requireAuth, async (req, res) => {
           type: "like",
           post: post._id,
         });
-
         if (!existing) {
           const newNotif = new Notification({
             recipient: post.author,
@@ -118,16 +162,21 @@ router.put("/:id/like", requireAuth, async (req, res) => {
             post: post._id,
           });
           await newNotif.save();
-          const populated = await newNotif.populate("sender", "username fullName profilePic");
-          const receiverSocketId = getReceiverSocketId(post.author.toString());
-          if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populated);
+          const populated = await newNotif.populate(
+            "sender",
+            "username fullName"
+          );
+          const receiverSocketId = getReceiverSocketId(
+            post.author.toString()
+          );
+          if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newNotification", populated);
+          }
         }
       }
     } else {
       post.likes.splice(idx, 1);
       await post.save();
-
-      // Remove Notification on unlike
       if (post.author.toString() !== req.user.id) {
         await Notification.deleteOne({
           recipient: post.author,
@@ -144,21 +193,25 @@ router.put("/:id/like", requireAuth, async (req, res) => {
   }
 });
 
-// DISLIKE/UNDISLIKE post
+// ─── DISLIKE / UNDISLIKE post — block-aware ───────────────────────────────────
 router.put("/:id/dislike", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const blockedIds = await getBlockedUserIds(req.user.id);
+    if (blockedIds.includes(String(post.author))) {
+      return res.status(403).json({ message: "Action not available." });
+    }
+
     if (!post.dislikes) post.dislikes = [];
     const idx = post.dislikes.indexOf(req.user.id);
     const likeIdx = post.likes.indexOf(req.user.id);
-    
+
     if (idx === -1) {
       post.dislikes.push(req.user.id);
       if (likeIdx !== -1) {
         post.likes.splice(likeIdx, 1);
-        
-        // Remove 'like' notification if we are removing a like
         if (post.author.toString() !== req.user.id) {
           await Notification.deleteOne({
             recipient: post.author,
@@ -178,11 +231,17 @@ router.put("/:id/dislike", requireAuth, async (req, res) => {
   }
 });
 
-// REPOST/UNREPOST post
+// ─── REPOST — block-aware ────────────────────────────────────────────────────
 router.put("/:id/repost", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const blockedIds = await getBlockedUserIds(req.user.id);
+    if (blockedIds.includes(String(post.author))) {
+      return res.status(403).json({ message: "Action not available." });
+    }
+
     const idx = post.reposts.indexOf(req.user.id);
     if (idx === -1) post.reposts.push(req.user.id);
     else post.reposts.splice(idx, 1);
@@ -193,12 +252,22 @@ router.put("/:id/repost", requireAuth, async (req, res) => {
   }
 });
 
-// ADD comment
+// ─── ADD comment — block-aware ────────────────────────────────────────────────
 router.post("/:id/comments", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
-    const comment = { author: req.user.id, text: req.body.text };
+
+    // Prevent commenting if either party has blocked the other
+    const blockedIds = await getBlockedUserIds(req.user.id);
+    if (blockedIds.includes(String(post.author))) {
+      return res.status(403).json({ message: "Action not available." });
+    }
+
+    const text = (req.body.text || "").trim();
+    if (!text) return res.status(400).json({ message: "Comment text is required." });
+
+    const comment = { author: req.user.id, text };
     post.comments.push(comment);
     await post.save();
     await post.populate("comments.author", "username fullName role");
@@ -208,10 +277,13 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
   }
 });
 
-// GET comments
+// ─── GET comments ─────────────────────────────────────────────────────────────
 router.get("/:id/comments", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate("comments.author", "username fullName role");
+    const post = await Post.findById(req.params.id).populate(
+      "comments.author",
+      "username fullName role"
+    );
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post.comments);
   } catch (err) {
@@ -219,12 +291,14 @@ router.get("/:id/comments", async (req, res) => {
   }
 });
 
-// EDIT post (author only)
+// ─── EDIT post ────────────────────────────────────────────────────────────────
 router.put("/:id", requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
-    if (post.author.toString() !== req.user.id) return res.status(403).json({ message: "Not your post" });
+    if (post.author.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not your post" });
+    }
     const { title, content, category, tags, image } = req.body;
     post.title = title ?? post.title;
     post.content = content ?? post.content;

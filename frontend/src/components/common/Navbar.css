@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 16px 28px;
+  padding: 12px 28px;
   background: linear-gradient(135deg, var(--brand-700), #3f7d7b);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -35,12 +35,19 @@
 
 .g-brand h1 {
   margin: 0;
-  font-size: 26px;
-  font-family: 'Playfair Display', serif;
-  font-weight: 900;
-  letter-spacing: 1px;
+  font-size: 32px; /* Set larger as Garamond runs small */
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   line-height: 1;
   color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.g-brand:hover h1 {
+  letter-spacing: 0.03em;
+  opacity: 0.95;
 }
 
 .g-nav-shell {

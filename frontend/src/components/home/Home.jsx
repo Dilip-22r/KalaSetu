@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import "./Home.css";
 import Navbar from "../common/Navbar";
 import { useFeedStore } from "../../store/useFeedStore";
+import { PostSkeleton } from "../common/Skeleton";
 
 import API from "../../utils/api";
 
@@ -182,7 +184,12 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
         <div className="post-actions">
           {/* Like */}
           <button className={`post-action-btn like ${liked ? "active" : ""}`} onClick={() => onLike(post._id)} disabled={!currentUser} title="Like">
-            <i className="fi fi-sr-heart" />
+            <motion.i 
+              className="fi fi-sr-heart"
+              initial={false}
+              animate={liked ? { scale: [1, 1.4, 1.2], filter: ["none", "drop-shadow(0 0 8px rgba(255, 0, 0, 0.4))", "none"] } : { scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            />
             <span className="action-count" onClick={(e) => { e.stopPropagation(); onShowLikes(post._id, post.likes?.length || 0); }}>
               {post.likes?.length || 0}
             </span>
@@ -681,9 +688,8 @@ function Home() {
 
           {/* Posts */}
           {loading ? (
-            <div className="loading-state">
-              <div className="spinner" />
-              <p>Loading posts...</p>
+            <div className="posts-grid">
+              {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
             </div>
           ) : posts.length === 0 ? (
             <div className="empty-state">

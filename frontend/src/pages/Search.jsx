@@ -6,6 +6,7 @@ import Navbar from "../components/common/Navbar";
 import { useAuthStore } from "../store/useAuthStore";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
+import { PostSkeleton, ProfileCardSkeleton } from "../components/common/Skeleton";
 import API from "../utils/api";
 
 function Search() {
@@ -207,8 +208,10 @@ function Search() {
         </div>
 
         {loading ? (
-          <div className="s-loading">
-            <div className="s-spinner"></div>
+          <div className={tab === "creators" ? "s-grid" : "explore-feed"}>
+            {[...Array(6)].map((_, i) => (
+              tab === "creators" ? <ProfileCardSkeleton key={i} /> : <div className="posts-grid" key={i}><PostSkeleton /></div>
+            ))}
           </div>
         ) : tab === "creators" ? (
           results.length === 0 ? (

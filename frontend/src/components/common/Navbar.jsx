@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../store/useNotificationStore";
@@ -209,9 +210,29 @@ function Navbar() {
             )}
             <div className="g-notif-wrapper" ref={dropdownRef}>
               <button className="g-alert-btn" onClick={handleBellClick}>
-                <i className="fi fi-sr-bell" />
+                <motion.div
+                  animate={unreadCount > 0 ? {
+                    rotate: [0, -15, 12, -15, 12, 0],
+                  } : { rotate: 0 }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: unreadCount > 0 ? Infinity : 0,
+                    repeatDelay: 3
+                  }}
+                >
+                  <i className="fi fi-sr-bell" />
+                </motion.div>
                 <span>Alerts</span>
-                {unreadCount > 0 && <span className="g-badge">{unreadCount}</span>}
+                {unreadCount > 0 && (
+                  <motion.span 
+                    className="g-badge"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                  >
+                    {unreadCount}
+                  </motion.span>
+                )}
               </button>
               {showNotifications && (
                 <div className="g-notif-dropdown">

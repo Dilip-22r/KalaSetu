@@ -327,6 +327,22 @@
   box-shadow: 0 10px 22px rgba(43, 43, 43, 0.08);
 }
 
+/* Edit Profile button — icon + stronger border */
+.prof-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--brand-700) !important;
+  color: var(--brand-700) !important;
+  background: transparent !important;
+  font-weight: 700;
+}
+
+.prof-edit-btn:hover {
+  background: rgba(47, 111, 109, 0.08) !important;
+  box-shadow: 0 4px 14px rgba(47, 111, 109, 0.16) !important;
+}
+
 .prof-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;

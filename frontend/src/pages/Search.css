@@ -355,7 +355,38 @@
   }
 
   .s-grid,
-  .s-posts {
+  .s-posts,
+  .explore-feed .posts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Explore specifically: 3-column grid for PostCards */
+.explore-feed .posts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch; /* Make all posts same size vertically */
+}
+
+.explore-feed .posts-grid .post-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.explore-feed .posts-grid .post-card .post-body {
+  flex: 1; /* Pushes footer/actions to bottom naturally */
+}
+
+@media (max-width: 1024px) {
+  .explore-feed .posts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .explore-feed .posts-grid {
     grid-template-columns: 1fr;
   }
 }

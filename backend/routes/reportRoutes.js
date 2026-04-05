@@ -24,7 +24,7 @@ export async function isBlockedInAnyDirection(userAId, userBId) {
 // ─── BLOCK ────────────────────────────────────────────────────────────────────
 
 // POST /reports/block/:userId
-router.post("/block/:userId", requireAuth, async (req, res) => {
+router.post("/block/:userId", requireAuth, async (req, res, next) => {
   try {
     const blockerId = req.user.id;
     const blockedId = req.params.userId;
@@ -65,12 +65,12 @@ router.post("/block/:userId", requireAuth, async (req, res) => {
       // Duplicate key — already blocked, still success
       return res.json({ message: "User is already blocked.", blocked: true });
     }
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // POST /reports/unblock/:userId
-router.post("/unblock/:userId", requireAuth, async (req, res) => {
+router.post("/unblock/:userId", requireAuth, async (req, res, next) => {
   try {
     await Block.findOneAndDelete({
       blocker: req.user.id,
@@ -78,12 +78,12 @@ router.post("/unblock/:userId", requireAuth, async (req, res) => {
     });
     return res.json({ message: "User unblocked.", blocked: false });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET /reports/blocked — list all users blocked by the current user
-router.get("/blocked", requireAuth, async (req, res) => {
+router.get("/blocked", requireAuth, async (req, res, next) => {
   try {
     const blocks = await Block.find({ blocker: req.user.id })
       .populate("blocked", "username fullName _id")
@@ -91,12 +91,12 @@ router.get("/blocked", requireAuth, async (req, res) => {
     const blockedUsers = blocks.map((b) => b.blocked);
     return res.json({ blockedUsers });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET /reports/blocked-ids — lightweight: just the IDs (for feed filtering)
-router.get("/blocked-ids", requireAuth, async (req, res) => {
+router.get("/blocked-ids", requireAuth, async (req, res, next) => {
   try {
     const blocks = await Block.find({
       $or: [{ blocker: req.user.id }, { blocked: req.user.id }],
@@ -112,12 +112,12 @@ router.get("/blocked-ids", requireAuth, async (req, res) => {
 
     return res.json({ blockedIds: [...new Set(ids)] });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET /reports/block-status/:userId — check block in both directions
-router.get("/block-status/:userId", requireAuth, async (req, res) => {
+router.get("/block-status/:userId", requireAuth, async (req, res, next) => {
   try {
     const [iBlockedThem, theyBlockedMe] = await Promise.all([
       Block.findOne({ blocker: req.user.id, blocked: req.params.userId }).lean(),
@@ -129,7 +129,7 @@ router.get("/block-status/:userId", requireAuth, async (req, res) => {
       isBlockedByThem: !!theyBlockedMe, // They blocked me
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
@@ -146,7 +146,7 @@ const VALID_REASONS = [
 ];
 
 // POST /reports/report/:userId
-router.post("/report/:userId", requireAuth, async (req, res) => {
+router.post("/report/:userId", requireAuth, async (req, res, next) => {
   try {
     const reporterId = req.user.id;
     const reportedUserId = req.params.userId;
@@ -194,14 +194,14 @@ router.post("/report/:userId", requireAuth, async (req, res) => {
         message: "You have already reported this user. Our team is reviewing it.",
       });
     }
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── ADMIN ROUTES (add role guard before going to production) ─────────────────
 
 // GET /reports/admin/pending — list all pending reports (admin only in future)
-router.get("/admin/pending", requireAuth, async (req, res) => {
+router.get("/admin/pending", requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -219,12 +219,12 @@ router.get("/admin/pending", requireAuth, async (req, res) => {
 
     return res.json({ reports, total, page, hasMore: page * limit < total });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // PUT /reports/admin/:reportId — update report status (admin action)
-router.put("/admin/:reportId", requireAuth, async (req, res) => {
+router.put("/admin/:reportId", requireAuth, async (req, res, next) => {
   try {
     const { status, adminNotes } = req.body;
     const validStatuses = ["pending", "under_review", "action_taken", "dismissed", "escalated"];
@@ -247,7 +247,7 @@ router.put("/admin/:reportId", requireAuth, async (req, res) => {
     if (!report) return res.status(404).json({ message: "Report not found." });
     return res.json({ message: "Report updated.", report });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

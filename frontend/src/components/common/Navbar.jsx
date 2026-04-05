@@ -38,14 +38,14 @@ function Navbar() {
   }, [authUser, setAuthUser, storedUser]);
 
   const [profilePhoto, setProfilePhoto] = useState(null);
-  
+
   useEffect(() => {
     if (!effectiveUser?._id) return;
     axios.get(`http://localhost:5000/profiles/${effectiveUser._id}`)
       .then(res => {
-         if (res.data?.photo) setProfilePhoto(res.data.photo);
+        if (res.data?.photo) setProfilePhoto(res.data.photo);
       })
-      .catch(() => {}); // silently fail if no profile yet
+      .catch(() => { }); // silently fail if no profile yet
   }, [effectiveUser?._id]);
 
   const initializeNotifications = useCallback(() => {
@@ -60,7 +60,7 @@ function Navbar() {
     if (!token) return;
     // Always refresh count on mount so badge is accurate
     fetchNotifications(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -162,189 +162,189 @@ function Navbar() {
   return (
     <>
       <nav className="g-navbar">
-      <div className="g-brand" onClick={() => navigate("/home")}>
-        <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
-        <div className="g-brand-copy">
-          <h1 className="display-serif">KalaSetu</h1>
+        <div className="g-brand" onClick={() => navigate("/home")}>
+          <img src={kalasetuLogo} alt="KalaSetu" className="g-logo" />
+          <div className="g-brand-copy">
+            <h1 className="display-serif">KalaSetu</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="g-nav-shell">
-        <div className="g-nav-main">
-          <button
-            className={`g-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
-            onClick={() => navigate("/home")}
-          >
-            <i className="fi fi-sr-home" />
-            Home
-          </button>
-          <button
-            className={`g-nav-item ${isActivePath("/search") ? "is-active" : ""}`}
-            onClick={() => navigate("/search")}
-          >
-            <i className="fi fi-sr-search" />
-            Explore
-          </button>
-          {effectiveUser.role !== "user" && (
+        <div className="g-nav-shell">
+          <div className="g-nav-main">
             <button
-              className={`g-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
-              onClick={() => navigate("/messages")}
+              className={`g-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
+              onClick={() => navigate("/home")}
             >
-              <i className="fi fi-sr-comments" />
-              Messages
+              <i className="fi fi-sr-home" />
+              Home
             </button>
-          )}
-        </div>
+            <button
+              className={`g-nav-item ${isActivePath("/search") ? "is-active" : ""}`}
+              onClick={() => navigate("/search")}
+            >
+              <i className="fi fi-sr-search" />
+              Explore
+            </button>
+            {effectiveUser.role !== "user" && (
+              <button
+                className={`g-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
+                onClick={() => navigate("/messages")}
+              >
+                <i className="fi fi-sr-comments" />
+                Messages
+              </button>
+            )}
+          </div>
 
-        <div className="g-nav-actions">
-          {effectiveUser.role === "user" && location.pathname !== "/register" && (
-            <button 
-              className="g-primary-btn" 
-              onClick={() => navigate("/register")}
-              style={{ fontSize: '13px', padding: '8px 16px', marginRight: '8px' }}
-            >
-              Register as Artisan / NGO
-            </button>
-          )}
-          <div className="g-notif-wrapper" ref={dropdownRef}>
-            <button className="g-alert-btn" onClick={handleBellClick}>
-              <i className="fi fi-sr-bell" />
-              <span>Alerts</span>
-              {unreadCount > 0 && <span className="g-badge">{unreadCount}</span>}
-            </button>
-            {showNotifications && (
-              <div className="g-notif-dropdown">
-                <div className="g-notif-header">
-                  <h4>Notifications</h4>
-                  <span>{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</span>
-                </div>
-                {notifications.length === 0 ? (
-                  <p className="no-notif">No new notifications yet.</p>
-                ) : (
-                  <div className="notif-list">
-                    {notifications.map((notification) => (
-                      <div
-                        key={notification._id}
-                        className={`notif-card ${!notification.read ? "unread" : ""}`}
-                        onClick={() => {
-                          if (notification.type === "message") {
-                            navigate(`/messages/${notification.sender?._id}`);
-                            setShowNotifications(false);
-                          } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
-                            navigate(`/profile/${notification.sender?._id}`);
-                            setShowNotifications(false);
-                          }
-                        }}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="notif-avatar">
-                          {notification.sender?.username?.[0]?.toUpperCase()}
-                        </div>
-                        <div className="notif-content">
-                          <p>
-                            {(() => {
+          <div className="g-nav-actions">
+            {effectiveUser.role === "user" && location.pathname !== "/register" && (
+              <button
+                className="g-primary-btn"
+                onClick={() => navigate("/register")}
+                style={{ fontSize: '13px', padding: '8px 16px', marginRight: '8px' }}
+              >
+                Register
+              </button>
+            )}
+            <div className="g-notif-wrapper" ref={dropdownRef}>
+              <button className="g-alert-btn" onClick={handleBellClick}>
+                <i className="fi fi-sr-bell" />
+                <span>Alerts</span>
+                {unreadCount > 0 && <span className="g-badge">{unreadCount}</span>}
+              </button>
+              {showNotifications && (
+                <div className="g-notif-dropdown">
+                  <div className="g-notif-header">
+                    <h4>Notifications</h4>
+                    <span>{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</span>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <p className="no-notif">No new notifications yet.</p>
+                  ) : (
+                    <div className="notif-list">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification._id}
+                          className={`notif-card ${!notification.read ? "unread" : ""}`}
+                          onClick={() => {
+                            if (notification.type === "message") {
+                              navigate(`/messages/${notification.sender?._id}`);
+                              setShowNotifications(false);
+                            } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
+                              navigate(`/profile/${notification.sender?._id}`);
+                              setShowNotifications(false);
+                            }
+                          }}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <div className="notif-avatar">
+                            {notification.sender?.username?.[0]?.toUpperCase()}
+                          </div>
+                          <div className="notif-content">
+                            <p>
+                              {(() => {
+                                const actionState = pendingFollowActions[notification._id];
+                                const isAcc = actionState === "accept_done" || notification.type === "follow_accepted_by_me";
+                                const isRej = actionState === "reject_done" || notification.type === "follow_rejected_by_me";
+
+                                if (isAcc) {
+                                  return <>You accepted <strong>{notification.sender?.username}</strong>'s follow request</>;
+                                }
+                                if (isRej) {
+                                  return <>You declined <strong>{notification.sender?.username}</strong>'s follow request</>;
+                                }
+
+                                return (
+                                  <>
+                                    <strong>{notification.sender?.username}</strong>{" "}
+                                    {notification.type === "like" && "liked your post"}
+                                    {notification.type === "message" && "sent you a message"}
+                                    {notification.type === "follow" && "started following you"}
+                                    {notification.type === "follow_accept" && "accepted your follow request"}
+                                    {notification.type === "follow_request" && "requested to follow you"}
+                                  </>
+                                );
+                              })()}
+                            </p>
+                            <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                            {notification.type === "follow_request" && (() => {
                               const actionState = pendingFollowActions[notification._id];
-                              const isAcc = actionState === "accept_done" || notification.type === "follow_accepted_by_me";
-                              const isRej = actionState === "reject_done" || notification.type === "follow_rejected_by_me";
+                              const isLoading = actionState?.endsWith("_loading");
+                              const isDone = actionState?.endsWith("_done");
 
-                              if (isAcc) {
-                                return <>You accepted <strong>{notification.sender?.username}</strong>'s follow request</>;
-                              }
-                              if (isRej) {
-                                return <>You declined <strong>{notification.sender?.username}</strong>'s follow request</>;
-                              }
-                              
+                              if (isDone) return null;
+
                               return (
-                                <>
-                                  <strong>{notification.sender?.username}</strong>{" "}
-                                  {notification.type === "like" && "liked your post"}
-                                  {notification.type === "message" && "sent you a message"}
-                                  {notification.type === "follow" && "started following you"}
-                                  {notification.type === "follow_accept" && "accepted your follow request"}
-                                  {notification.type === "follow_request" && "requested to follow you"}
-                                </>
+                                <div className="notif-follow-actions">
+                                  <button
+                                    className="notif-accept-btn"
+                                    disabled={isLoading}
+                                    onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "accept")}
+                                  >
+                                    {actionState === "accept_loading" ? (
+                                      <span className="notif-btn-spinner" />
+                                    ) : (
+                                      <><i className="fi fi-sr-user-check" /> Accept</>
+                                    )}
+                                  </button>
+                                  <button
+                                    className="notif-reject-btn"
+                                    disabled={isLoading}
+                                    onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "reject")}
+                                  >
+                                    {actionState === "reject_loading" ? (
+                                      <span className="notif-btn-spinner" />
+                                    ) : (
+                                      <><i className="fi fi-sr-user-minus" /> Decline</>
+                                    )}
+                                  </button>
+                                </div>
                               );
                             })()}
-                          </p>
-                          <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
-                          {notification.type === "follow_request" && (() => {
-                            const actionState = pendingFollowActions[notification._id];
-                            const isLoading = actionState?.endsWith("_loading");
-                            const isDone = actionState?.endsWith("_done");
-
-                            if (isDone) return null;
-
-                            return (
-                              <div className="notif-follow-actions">
-                                <button
-                                  className="notif-accept-btn"
-                                  disabled={isLoading}
-                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "accept")}
-                                >
-                                  {actionState === "accept_loading" ? (
-                                    <span className="notif-btn-spinner" />
-                                  ) : (
-                                    <><i className="fi fi-sr-user-check" /> Accept</>
-                                  )}
-                                </button>
-                                <button
-                                  className="notif-reject-btn"
-                                  disabled={isLoading}
-                                  onClick={(e) => handleFollowRequest(e, notification.sender?._id, notification._id, "reject")}
-                                >
-                                  {actionState === "reject_loading" ? (
-                                    <span className="notif-btn-spinner" />
-                                  ) : (
-                                    <><i className="fi fi-sr-user-minus" /> Decline</>
-                                  )}
-                                </button>
-                              </div>
-                            );
-                          })()}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {hasMore && (
-                      <button className="load-more-btn" onClick={() => fetchNotifications(page + 1)}>
-                        Load More
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="g-profile-wrapper" ref={profileRef}>
-            <button
-              className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
-              onClick={() => setShowProfileMenu((v) => !v)}
-            >
-              {profilePhoto ? (
-                <img src={profilePhoto} alt="Profile" className="g-profile-avatar-img" />
-              ) : (
-                <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+                      ))}
+                      {hasMore && (
+                        <button className="load-more-btn" onClick={() => fetchNotifications(page + 1)}>
+                          Load More
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-              <span className="g-profile-copy">
-                <strong>{effectiveUser.username}</strong>
-              </span>
-            </button>
-            {showProfileMenu && (
-              <div className="g-profile-dropdown">
-                <div className="g-profile-menu-item" onClick={() => { navigate(`/profile/${effectiveUser._id}`); setShowProfileMenu(false); }}>
-                  <i className="fi fi-sr-user" /> View Profile
+            </div>
+
+            <div className="g-profile-wrapper" ref={profileRef}>
+              <button
+                className={`g-profile-btn ${isActivePath("/profile") ? "is-active" : ""}`}
+                onClick={() => setShowProfileMenu((v) => !v)}
+              >
+                {profilePhoto ? (
+                  <img src={profilePhoto} alt="Profile" className="g-profile-avatar-img" />
+                ) : (
+                  <span className="g-profile-avatar">{effectiveUser.username?.[0]?.toUpperCase()}</span>
+                )}
+                <span className="g-profile-copy">
+                  <strong>{effectiveUser.username}</strong>
+                </span>
+              </button>
+              {showProfileMenu && (
+                <div className="g-profile-dropdown">
+                  <div className="g-profile-menu-item" onClick={() => { navigate(`/profile/${effectiveUser._id}`); setShowProfileMenu(false); }}>
+                    <i className="fi fi-sr-user" /> View Profile
+                  </div>
+                  <div className="g-profile-menu-divider" />
+                  <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
+                    <i className="fi fi-sr-sign-out-alt" /> Logout
+                  </div>
                 </div>
-                <div className="g-profile-menu-divider" />
-                <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
-                  <i className="fi fi-sr-sign-out-alt" /> Logout
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
-      
+      </nav>
+
       {showLogoutConfirm && (
         <div className="g-modal-overlay nav-modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
           <div className="g-modal-content nav-modal-content" onClick={(e) => e.stopPropagation()}>

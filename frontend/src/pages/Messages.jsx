@@ -117,8 +117,9 @@ function Messages() {
       setMessagingAllowed(res.data.canMessage);
       setMessagingBlockReason(res.data.reason || null);
     } catch {
-      setMessagingAllowed(true); // fail-open so we don't block on errors
-      setMessagingBlockReason(null);
+      // Fail-closed on errors to avoid bypassing block restrictions
+      setMessagingAllowed(false);
+      setMessagingBlockReason("unavailable");
     }
   }, [token]);
 
@@ -642,6 +643,10 @@ function Messages() {
                   <span className="msg-locked-text">
                     {messagingBlockReason === "pending_request"
                       ? "You can message this user only after they accept your follow request."
+                      : messagingBlockReason === "you_blocked"
+                      ? "You have blocked this user. Unblock them to send messages."
+                      : messagingBlockReason === "messaging_unavailable" || messagingBlockReason === "unavailable"
+                      ? "Messaging is unavailable with this user."
                       : "Follow this user to send them a message."}
                   </span>
                 </div>
@@ -654,6 +659,7 @@ function Messages() {
                       accept="image/*"
                       hidden
                       onChange={async (e) => {
+                        if (messagingAllowed !== true) return;
                         const file = e.target.files[0];
                         if (!file) return;
                         const reader = new FileReader();
@@ -662,7 +668,7 @@ function Messages() {
                           try {
                             const res = await axios.post(
                               `${API}/messages`,
-                              { receiverId: activeUserId, text: "Shared an image", image: base64 },
+                              { receiverId: activeUserId, image: base64 },
                               { headers: { Authorization: `Bearer ${token}` } }
                             );
                             addMessage(res.data);

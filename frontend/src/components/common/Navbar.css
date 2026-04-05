@@ -6,11 +6,53 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 12px 28px;
+  padding: 10px 28px;
   background: linear-gradient(135deg, var(--brand-700), #3f7d7b);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 12px 28px rgba(43, 43, 43, 0.12);
+}
+
+@media (max-width: 768px) {
+  .g-navbar {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .g-navbar-text {
+    font-size: 20px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .g-navbar {
+    padding: 10px 8px;
+  }
+  .g-navbar-text {
+    font-size: 18px !important;
+  }
+  .g-navbar-logo {
+    height: 28px !important;
+  }
+}
+
+.desktop-only {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
 }
 
 .g-brand {
@@ -26,6 +68,37 @@
   height: 40px;
   object-fit: contain;
   border-radius: 50%;
+}
+
+.g-navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.g-navbar-logo {
+  height: 38px;
+  width: auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.g-navbar-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .g-navbar-text {
+    font-size: 22px;
+  }
+  .g-navbar-logo {
+    height: 32px;
+  }
 }
 
 .g-brand-copy {
@@ -156,6 +229,28 @@
 .g-profile-btn.is-active {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(43, 43, 43, 0.1);
+}
+
+.g-profile.msg-bubble {
+  max-width: min(85%, 560px);
+  padding: 10px 16px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.msg-bubble.mine {
+  background: linear-gradient(135deg, var(--brand-700), #4f8b89);
+  color: #fff;
+  border-radius: 22px 22px 4px 22px;
+}
+
+.msg-bubble.theirs {
+  background: #fff;
+  color: var(--text-strong);
+  border: 1px solid rgba(47, 111, 109, 0.08);
+  border-radius: 22px 22px 22px 4px;
 }
 
 .g-profile-avatar {
@@ -594,4 +689,87 @@
 .notif-action-done.rejected {
   background: rgba(184, 92, 56, 0.1);
   color: #b85c38;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAVIGATION
+══════════════════════════════════════════════════════════════════════════ */
+.g-mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(47, 111, 109, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 12px calc(env(safe-area-inset-bottom, 0) / 2);
+  z-index: 2000;
+  box-shadow: 0 -8px 24px rgba(43, 43, 43, 0.06);
+}
+
+.g-m-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 8px 0;
+}
+
+.g-m-nav-item i {
+  font-size: 22px;
+}
+
+.g-m-nav-item span {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.g-m-nav-item.is-active {
+  color: var(--brand-700);
+}
+
+.g-m-profile-img, .g-m-profile-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.g-m-profile-placeholder {
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-300));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.g-m-nav-item.is-active .g-m-profile-img,
+.g-m-nav-item.is-active .g-m-profile-placeholder {
+  box-shadow: 0 0 0 2px var(--brand-700);
+}
+
+/* Adjust page content to not be hidden behind bottom nav */
+body {
+  padding-bottom: 68px;
+}
+
+@media (min-width: 769px) {
+  body {
+    padding-bottom: 0;
+  }
 }

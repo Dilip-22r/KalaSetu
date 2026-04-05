@@ -57,6 +57,8 @@ function Messages() {
   // messaging permission
   const [messagingAllowed, setMessagingAllowed] = useState(null); // null=loading, true, false
   const [messagingBlockReason, setMessagingBlockReason] = useState(null);
+  const [mobileView, setMobileView] = useState("list"); // 'list' or 'chat'
+
 
   const { onlineUsers, socket } = useAuthStore();
   const {
@@ -374,9 +376,9 @@ function Messages() {
       )}
 
       <Navbar />
-
       <div className="msg-layout">
-        <div className="msg-sidebar">
+        {/* SIDEBAR: Hidden on mobile when a chat is active */}
+        <div className={`msg-sidebar ${mobileView === "chat" ? "hidden-mobile" : ""}`}>
           <div className="msg-sidebar-header">
             <h3><i className="fi fi-sr-comments" /> Messages</h3>
             {onlineUsers.length > 0 && <span className="msg-online-count">{onlineUsers.length} online</span>}
@@ -385,135 +387,127 @@ function Messages() {
           <div className="msg-search-wrap">
             <input
               type="text"
-              placeholder="Find artisans and NGOs..."
+              placeholder="Search conversations..."
               value={searchQuery}
-              onChange={(event) => handleSearch(event.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="msg-search"
             />
-            {searchQuery && (
-              <div className="msg-search-dropdown">
-                {searching ? (
-                  <div className="msg-search-loading">Searching...</div>
-                ) : searchResults.length === 0 ? (
-                  <div className="msg-search-empty">No results found</div>
-                ) : (
-                  searchResults.map((profile) => (
-                    <div
-                      key={profile._id}
-                      className="msg-search-item"
-                      onClick={() => startNewConversation(profile)}
-                    >
-                      <div className="msg-mini-avatar">{profile.user?.username?.[0]?.toUpperCase()}</div>
-                      <div>
-                        <div className="msg-search-name">{profile.displayName || profile.user?.fullName}</div>
-                        <div className={`msg-search-role ${profile.user?.role}`}>{profile.user?.role}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
           </div>
 
           <div className="msg-conv-list">
             {loadingConvs ? (
               <div className="msg-conv-loading">Loading...</div>
-            ) : conversations.length === 0 ? (
-              <div className="msg-conv-empty">
-                <p>No conversations yet.</p>
-                <p>Search above to start one.</p>
-              </div>
             ) : (
-              conversations.map((conv) => {
-                const partnerId = conv.partner._id?.toString() ?? conv.partner._id;
-                const isActive = activeUserId === partnerId || activeUserId === conv.partner._id;
-                const isOnline = onlineUsers.includes(partnerId);
-                const unread = isActive ? 0 : (unreadMap[partnerId] || 0);
+              (() => {
+                const filtered = conversations.filter(c => 
+                  c.partner.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  c.partner.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
 
-                return (
-                  <div
-                    key={partnerId}
-                    className={`msg-conv-item ${isActive ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
-                    onClick={() => {
-                      setActiveUser(conv.partner);
-                      setActiveUserId(partnerId);
-                    }}
-                  >
-                    <div className="msg-conv-avatar-wrap">
-                      <div className="msg-conv-avatar">
-                        {conv.partner.photo ? (
-                          <img src={conv.partner.photo} alt="" className="msg-conv-avatar-img" />
-                        ) : (
-                          conv.partner.username?.[0]?.toUpperCase() || conv.partner.fullName?.[0]?.toUpperCase()
-                        )}
-                      </div>
-                      {isOnline && <span className="msg-online-dot"></span>}
-                    </div>
-                    <div className="msg-conv-info">
-                      <div className={`msg-conv-name ${unread > 0 ? "unread" : ""}`}>
-                        {conv.partner.fullName || conv.partner.username || "Unknown"}
-                      </div>
-                      <div className={`msg-conv-last ${unread > 0 ? "unread" : ""}`}>
-                        {conv.lastMessage?.deleted
-                          ? "Message deleted"
-                          : conv.lastMessage?.sharedPost
-                            ? (conv.lastMessage.sender === user._id || conv.lastMessage.sender?._id === user._id ? "You shared a post" : "Shared a post")
-                            : conv.lastMessage?.image
-                              ? (conv.lastMessage.sender === user._id || conv.lastMessage.sender?._id === user._id ? "You sent an image" : "Sent an image")
-                              : conv.lastMessage?.text
-                              ? conv.lastMessage.text.slice(0, 34) + (conv.lastMessage.text.length > 34 ? "..." : "")
-                              : "No messages yet"}
-                      </div>
-                    </div>
-                    <div className="msg-conv-meta">
-                      <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
-                      {unread > 0 && (
-                        <span className="msg-unread-badge">{unread > 99 ? "99+" : unread}</span>
+                if (filtered.length === 0) {
+                  return (
+                    <div className="msg-conv-empty">
+                      <p>{searchQuery ? "No matching conversations." : "No conversations yet."}</p>
+                      {searchQuery && (
+                         <button className="msg-global-search-hint" onClick={() => navigate("/search")}>
+                            Try global search?
+                         </button>
                       )}
                     </div>
-                  </div>
-                );
-              })
+                  );
+                }
+
+                return filtered.map((conv) => {
+                  const partnerId = conv.partner._id?.toString() ?? conv.partner._id;
+                  const isActive = activeUserId === partnerId;
+                  const isOnline = onlineUsers.includes(partnerId);
+                  const unread = isActive ? 0 : (unreadMap[partnerId] || 0);
+
+                  return (
+                    <div
+                      key={partnerId}
+                      className={`msg-conv-item ${isActive ? "active" : ""} ${unread > 0 ? "unread" : ""}`}
+                      onClick={() => {
+                        setActiveUser(conv.partner);
+                        setActiveUserId(partnerId);
+                        setMobileView("chat");
+                        navigate(`/messages/${partnerId}`);
+                      }}
+                    >
+                      <div className="msg-conv-avatar-wrap">
+                        <div className="msg-conv-avatar">
+                          {conv.partner.photo ? (
+                            <img src={conv.partner.photo} alt="" className="msg-conv-avatar-img" />
+                          ) : (
+                            conv.partner.username?.[0]?.toUpperCase()
+                          )}
+                        </div>
+                        {isOnline && <span className="msg-online-dot"></span>}
+                      </div>
+                      <div className="msg-conv-info">
+                        <div className={`msg-conv-name ${unread > 0 ? "unread" : ""}`}>
+                          {conv.partner.username}
+                        </div>
+                        <div className={`msg-conv-last ${unread > 0 ? "unread" : ""}`}>
+                          {conv.lastMessage?.text || "Started a conversation"}
+                        </div>
+                      </div>
+                      <div className="msg-conv-meta">
+                        <div className="msg-conv-time">{formatDate(conv.lastMessage?.createdAt)}</div>
+                        {unread > 0 && (
+                          <span className="msg-unread-badge">{unread}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()
             )}
           </div>
         </div>
 
-        <div className="msg-chat">
+        {/* CHAT AREA: Hidden on mobile when in list view */}
+        <div className={`msg-chat ${mobileView === "list" ? "hidden-mobile" : ""}`}>
           {!activeUserId ? (
             <div className="msg-empty-chat">
               <span><i className="fi fi-sr-comments" /></span>
               <h3>Select a conversation</h3>
-              <p>Choose from the list or search for someone to message</p>
+              <p>Choose from the list to start messaging.</p>
             </div>
           ) : (
             <>
               <div className="msg-chat-header">
+                <button className="msg-back-btn mobile-only" onClick={() => setMobileView("list")}>
+                  <i className="fi fi-sr-arrow-left" />
+                </button>
                 <div className="msg-chat-avatar-wrap">
                   <div className="msg-chat-avatar">
                     {activeUser?.photo ? (
                       <img src={activeUser.photo} alt="" className="msg-chat-avatar-img" />
                     ) : (
-                      activeUser?.username?.[0]?.toUpperCase() || activeUser?.fullName?.[0]?.toUpperCase() || "?"
+                      activeUser?.username?.[0]?.toUpperCase()
                     )}
                   </div>
                   {onlineUsers.includes(activeUserId) && <span className="msg-chat-online-dot"></span>}
                 </div>
                 <div className="msg-chat-header-info">
-                  <div className="msg-chat-name">{activeUser?.fullName || activeUser?.username || "User"}</div>
+                  <div className="msg-chat-name" onClick={() => navigate(`/profile/${activeUserId}`)} style={{cursor: 'pointer'}}>
+                    {activeUser?.username}
+                  </div>
                   <div className="msg-chat-status">
                     {onlineUsers.includes(activeUserId) ? (
                       <span className="msg-online-text">Online</span>
                     ) : (
-                      <span className={`msg-chat-role ${activeUser?.role}`}>{activeUser?.role}</span>
+                      "Offline"
                     )}
                   </div>
                 </div>
                 <div className="msg-chat-actions">
                   <button className="msg-view-profile" onClick={() => navigate(`/profile/${activeUserId}`)}>
-                    <i className="fi fi-sr-user" /> View Profile
+                    <i className="fi fi-sr-user" /> <span className="desktop-only">View Profile</span>
                   </button>
-                  <button className="msg-clear-btn" onClick={() => setShowClearConfirm(true)} title="Clear chat">
-                    <i className="fi fi-sr-trash" /> Clear
+                  <button className="msg-clear-btn" onClick={() => setShowClearConfirm(true)}>
+                    <i className="fi fi-sr-trash" /> <span className="desktop-only">Clear</span>
                   </button>
                 </div>
               </div>
@@ -548,7 +542,7 @@ function Messages() {
                                   <span className="msg-reply-name">
                                     {msg.replyTo.sender === user._id || msg.replyTo.sender?._id === user._id
                                       ? "You"
-                                      : activeUser?.fullName || "Them"}
+                                      : activeUser?.username || "Them"}
                                   </span>
                                   <span className="msg-reply-text">{msg.replyTo.text?.slice(0, 60)}</span>
                                 </div>
@@ -564,7 +558,7 @@ function Messages() {
                                       )}
                                     </div>
                                     <div className="msg-shared-author-info">
-                                      <div className="msg-shared-name">{msg.sharedPost.author?.fullName}</div>
+                                      <div className="msg-shared-name">{msg.sharedPost.author?.username}</div>
                                       <div className="msg-shared-role">{msg.sharedPost.author?.role}</div>
                                     </div>
                                   </div>
@@ -634,7 +628,6 @@ function Messages() {
                 </div>
               )}
 
-              {/* Input bar — locked or normal, always same height */}
               {messagingAllowed === false ? (
                 <div className="msg-input-bar msg-input-disabled">
                   <span className="msg-locked-icon">
@@ -690,7 +683,8 @@ function Messages() {
                     className="msg-text-input"
                   />
                   <button type="submit" className="msg-send-btn" disabled={sending || !text.trim() || messagingAllowed === null}>
-                    <i className="fi fi-sr-comment-alt-dots" /> {sending ? "..." : "Send"}
+                    <i className="fi fi-sr-paper-plane" /> 
+                    <span>{sending ? "..." : "Send"}</span>
                   </button>
                 </form>
               )}

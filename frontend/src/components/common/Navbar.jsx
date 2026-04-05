@@ -171,7 +171,7 @@ function Navbar() {
           </div>
         </div>
 
-        <div className="g-nav-shell">
+        <div className="g-nav-shell desktop-only">
           <div className="g-nav-main">
             <button
               className={`g-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
@@ -390,6 +390,56 @@ function Navbar() {
         </div>
       )}
 
+      {/* Mobile Bottom Navigation — Only visible on mobile via CSS */}
+      <div className="g-mobile-nav mobile-only">
+        <button
+          className={`g-m-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
+          onClick={() => navigate("/home")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-home" />
+          </motion.div>
+          <span>Home</span>
+        </button>
+
+        <button
+          className={`g-m-nav-item ${isActivePath("/search") ? "is-active" : ""}`}
+          onClick={() => navigate("/search")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-search" />
+          </motion.div>
+          <span>Explore</span>
+        </button>
+
+        {effectiveUser.role !== "user" && (
+          <button
+            className={`g-m-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
+            onClick={() => navigate("/messages")}
+          >
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <i className="fi fi-sr-comments" />
+            </motion.div>
+            <span>Messages</span>
+          </button>
+        )}
+
+        <button
+          className={`g-m-nav-item ${isActivePath("/profile") ? "is-active" : ""}`}
+          onClick={() => navigate(`/profile/${effectiveUser._id}`)}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt="Me" className="g-m-profile-img" />
+            ) : (
+              <div className="g-m-profile-placeholder">
+                {effectiveUser.username?.[0]?.toUpperCase()}
+              </div>
+            )}
+          </motion.div>
+          <span>Profile</span>
+        </button>
+      </div>
     </>
   );
 }

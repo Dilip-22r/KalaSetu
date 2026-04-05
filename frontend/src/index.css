@@ -24,6 +24,23 @@
   --page-narrow: 760px;
   --page-pad: clamp(16px, 3vw, 32px);
   --section-gap: clamp(24px, 3vw, 40px);
+
+  /* Mobile Hardening */
+  --mobile-pad: 16px;
+  --mobile-gap: 20px;
+  --mobile-radius: 18px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --page-pad: var(--mobile-pad);
+    --section-gap: var(--mobile-gap);
+  }
+
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
 }
 
 * {

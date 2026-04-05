@@ -266,7 +266,7 @@ function Navbar() {
                                 );
                               })()}
                             </p>
-                            <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                            <small>{new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(new Date(notification.createdAt))}</small>
                             {notification.type === "follow_request" && (() => {
                               const actionState = pendingFollowActions[notification._id];
                               const isLoading = actionState?.endsWith("_loading");
@@ -334,6 +334,9 @@ function Navbar() {
                   <div className="g-profile-menu-item" onClick={() => { navigate(`/profile/${effectiveUser._id}`); setShowProfileMenu(false); }}>
                     <i className="fi fi-sr-user" /> View Profile
                   </div>
+                  <div className="g-profile-menu-item" onClick={() => { navigate("/settings"); setShowProfileMenu(false); }}>
+                    <i className="fi fi-sr-settings" /> Settings
+                  </div>
                   <div className="g-profile-menu-divider" />
                   <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
                     <i className="fi fi-sr-sign-out-alt" /> Logout
@@ -364,6 +367,7 @@ function Navbar() {
           </div>
         </div>
       )}
+
     </>
   );
 }

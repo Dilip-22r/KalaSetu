@@ -291,6 +291,30 @@ router.get("/:id/comments", async (req, res) => {
   }
 });
 
+// ─── DELETE comment ───────────────────────────────────────────────────────────
+router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const comment = post.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    // Allow deleting only if the user is the author of the comment
+    if (comment.author.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not your comment" });
+    }
+
+    // Pull the comment
+    post.comments.pull(req.params.commentId);
+    await post.save();
+    
+    res.json({ message: "Comment deleted", commentId: req.params.commentId });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ─── EDIT post ────────────────────────────────────────────────────────────────
 router.put("/:id", requireAuth, async (req, res) => {
   try {

@@ -530,7 +530,8 @@ function Profile() {
 
             <div className="prof-hero-actions">
               {isOwn && (
-                <button className="prof-secondary-btn" onClick={handleEditClick}>
+                <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
+                  <i className="fi fi-sr-pencil" />
                   Edit Profile
                 </button>
               )}

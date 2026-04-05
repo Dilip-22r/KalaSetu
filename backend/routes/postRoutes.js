@@ -6,6 +6,8 @@ import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddle
 import { Notification } from "../models/Notification.js";
 import { Profile } from "../models/Profile.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage } from "../middleware/imageValidationMiddleware.js";
 
 const router = express.Router();
 
@@ -69,44 +71,63 @@ async function attachPhotosToUserObjects(items, isComment = false) {
   return items;
 }
 
-// ─── GET all posts — block-aware feed ─────────────────────────────────────────
-router.get("/", optionalAuth, async (req, res) => {
+// ─── GET all posts — block-aware feed (paginated) ─────────────────────────────
+router.get("/", optionalAuth, async (req, res, next) => {
   try {
-    const { search, category } = req.query;
+    const { search, category, author } = req.query;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip  = (page - 1) * limit;
+
     const filter = {};
     if (category) filter.category = category;
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
+        { title:   { $regex: search, $options: "i" } },
         { content: { $regex: search, $options: "i" } },
-        { tags: { $in: [new RegExp(search, "i")] } },
+        { tags:    { $in: [new RegExp(search, "i")] } },
       ];
     }
-
-    // If logged in, hide posts from blocked users (both directions)
-    if (req.user?.id) {
+    // If fetching a specific author's posts, use the { author, createdAt } index directly
+    if (author) {
+      filter.author = author;
+    } else if (req.user?.id) {
+      // Only apply block filter for general feed (not author-specific profiles)
       const blockedIds = await getBlockedUserIds(req.user.id);
       if (blockedIds.length > 0) {
         filter.author = { $nin: blockedIds };
       }
     }
 
-    const posts = await Post.find(filter)
-      .populate("author", "username fullName role")
-      .populate("comments.author", "username fullName role")
-      .sort({ createdAt: -1 })
-      .lean();
+    // Run count and fetch in parallel for speed
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(filter),
+      Post.find(filter)
+        .populate("author", "username fullName role")
+        .populate("comments.author", "username fullName role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
     await attachPhotosToUserObjects(posts);
 
-    res.json(posts);
+    res.json({
+      posts,
+      page,
+      limit,
+      total,
+      hasMore: skip + posts.length < total,
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
+
 // ─── GET single post ───────────────────────────────────────────────────────────
-router.get("/:id", optionalAuth, async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id)
       .populate("author", "username fullName role")
@@ -126,12 +147,12 @@ router.get("/:id", optionalAuth, async (req, res) => {
 
     res.json(post);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET post likers ───────────────────────────────────────────────────────────
-router.get("/:id/likes", async (req, res) => {
+router.get("/:id/likes", async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id).populate(
       "likes",
@@ -140,12 +161,12 @@ router.get("/:id/likes", async (req, res) => {
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post.likes);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CREATE post ──────────────────────────────────────────────────────────────
-router.post("/", requireAuth, requireRole, async (req, res) => {
+router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const { title, content, category, tags, image } = req.body;
     const post = new Post({
@@ -162,12 +183,12 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     await attachPhotosToUserObjects(leanPost);
     res.status(201).json(leanPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE post ──────────────────────────────────────────────────────────────
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -177,12 +198,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await post.deleteOne();
     res.json({ message: "Post deleted" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── LIKE / UNLIKE post — block-aware ────────────────────────────────────────
-router.put("/:id/like", requireAuth, async (req, res) => {
+router.put("/:id/like", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -245,12 +266,12 @@ router.put("/:id/like", requireAuth, async (req, res) => {
 
     res.json({ likes: post.likes.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DISLIKE / UNDISLIKE post — block-aware ───────────────────────────────────
-router.put("/:id/dislike", requireAuth, async (req, res) => {
+router.put("/:id/dislike", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -283,12 +304,12 @@ router.put("/:id/dislike", requireAuth, async (req, res) => {
     await post.save();
     res.json({ dislikes: post.dislikes.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── REPOST — block-aware ────────────────────────────────────────────────────
-router.put("/:id/repost", requireAuth, async (req, res) => {
+router.put("/:id/repost", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -304,12 +325,12 @@ router.put("/:id/repost", requireAuth, async (req, res) => {
     await post.save();
     res.json({ reposts: post.reposts.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── ADD comment — block-aware ────────────────────────────────────────────────
-router.post("/:id/comments", requireAuth, async (req, res) => {
+router.post("/:id/comments", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -331,12 +352,12 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     await attachPhotosToUserObjects(newComment, true);
     res.json(newComment);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET comments ─────────────────────────────────────────────────────────────
-router.get("/:id/comments", async (req, res) => {
+router.get("/:id/comments", async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id)
       .populate("comments.author", "username fullName role")
@@ -345,12 +366,12 @@ router.get("/:id/comments", async (req, res) => {
     await attachPhotosToUserObjects(post.comments, true);
     res.json(post.comments);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE comment ───────────────────────────────────────────────────────────
-router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
+router.delete("/:id/comments/:commentId", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -369,12 +390,12 @@ router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
     
     res.json({ message: "Comment deleted", commentId: req.params.commentId });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── EDIT post ────────────────────────────────────────────────────────────────
-router.put("/:id", requireAuth, async (req, res) => {
+router.put("/:id", requireAuth, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -393,7 +414,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     await attachPhotosToUserObjects(leanPost);
     res.json(leanPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

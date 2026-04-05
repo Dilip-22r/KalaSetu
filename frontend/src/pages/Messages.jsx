@@ -6,7 +6,7 @@ import { useChatStore } from "../store/useChatStore";
 import "./Messages.css";
 import Navbar from "../components/common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 function MessageTick({ status }) {
   if (status === "seen") {

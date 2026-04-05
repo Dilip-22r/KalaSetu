@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./SettingsModal.css";
 
-const API = "http://localhost:5000";
+import API from "../../utils/api";
 
 function SettingsModal({ onClose }) {
   const currentUser = JSON.parse(localStorage.getItem("user") || "null");

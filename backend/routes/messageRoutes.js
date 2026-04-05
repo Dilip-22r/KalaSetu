@@ -6,6 +6,8 @@ import { Block } from "../models/Block.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import { Notification } from "../models/Notification.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage } from "../middleware/imageValidationMiddleware.js";
 
 const router = express.Router();
 
@@ -64,7 +66,7 @@ async function canSendMessage(senderId, receiverId) {
 }
 
 // ─── GET conversations (exclude conversations with blocked users) ──────────────
-router.get("/conversations", requireAuth, requireRole, async (req, res) => {
+router.get("/conversations", requireAuth, requireRole, async (req, res, next) => {
   try {
     const mongoose = (await import("mongoose")).default;
     const userId = req.user.id;
@@ -163,12 +165,12 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET messages between two users (enforce block check) ─────────────────────
-router.get("/:userId", requireAuth, requireRole, async (req, res) => {
+router.get("/:userId", requireAuth, requireRole, async (req, res, next) => {
   try {
     // Block guard — if either side has blocked, deny reading history too
     const { isBlocked } = await getBlockStatus(req.user.id, req.params.userId);
@@ -208,12 +210,12 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CHECK if current user can message another user ───────────────────────────
-router.get("/can-message/:userId", requireAuth, async (req, res) => {
+router.get("/can-message/:userId", requireAuth, async (req, res, next) => {
   try {
     const result = await canSendMessage(req.user.id, req.params.userId);
     if (result.allowed) return res.json({ canMessage: true });
@@ -233,12 +235,12 @@ router.get("/can-message/:userId", requireAuth, async (req, res) => {
       reason: friendlyReasons[result.reason] || "messaging_unavailable",
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
-// ─── SEND message ─────────────────────────────────────────────────────────────
-router.post("/", requireAuth, requireRole, async (req, res) => {
+// ─── SEND message ─────────────────────────────────────────────────────────────────
+router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const { receiverId, text, replyTo, sharedPostId, image } = req.body;
 
@@ -307,12 +309,12 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
 
     res.status(201).json(populated);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE single message (soft delete for sender only) ──────────────────────
-router.delete("/:messageId", requireAuth, async (req, res) => {
+router.delete("/:messageId", requireAuth, async (req, res, next) => {
   try {
     const msg = await Message.findById(req.params.messageId);
     if (!msg) return res.status(404).json({ message: "Message not found" });
@@ -331,12 +333,12 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
     }
     res.json({ messageId: msg._id, deleted: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CLEAR chat for current user only ─────────────────────────────────────────
-router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) => {
+router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const partnerId = req.params.partnerId;
@@ -353,12 +355,12 @@ router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) =>
     );
     res.json({ message: "Chat cleared for you" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE FOR ME only ────────────────────────────────────────────────────────
-router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
+router.delete("/:messageId/for-me", requireAuth, async (req, res, next) => {
   try {
     const msg = await Message.findById(req.params.messageId);
     if (!msg) return res.status(404).json({ message: "Message not found" });
@@ -374,7 +376,7 @@ router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
     }
     res.json({ messageId: msg._id, hiddenForMe: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

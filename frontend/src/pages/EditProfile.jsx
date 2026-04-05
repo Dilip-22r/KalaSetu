@@ -8,7 +8,7 @@ import getCroppedImg from "../utils/cropImage";
 import "./EditProfile.css";
 import Navbar from "../components/common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 function EditProfile() {
   const navigate = useNavigate();

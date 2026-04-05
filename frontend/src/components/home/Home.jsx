@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 import "./Home.css";
 import Navbar from "../common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../../utils/api";
 
 const CATEGORIES = [
   { value: "", label: "All Posts", icon: "fi-sr-apps" },
@@ -457,12 +457,30 @@ function Home() {
   const [user] = useState(() => JSON.parse(localStorage.getItem("user") || "null"));
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const searchDebounceRef = useRef(null);
+
+  // Debounce search input: 400ms delay before hitting the API
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // reset to first page on new search
+    }, 400);
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [search]);
+
+  // Reset page when category changes
+  useEffect(() => { setPage(1); }, [category]);
 
   useEffect(() => {
     if (!user?._id) return;
@@ -473,22 +491,31 @@ function Home() {
       .catch(() => { });
   }, [user?._id]);
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
+  const fetchPosts = useCallback(async (pageNum = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     try {
-      const params = {};
-      if (search) params.search = search;
+      const params = { page: pageNum, limit: 10 };
+      if (debouncedSearch) params.search = debouncedSearch;
       if (category) params.category = category;
       const token = localStorage.getItem("token");
-      // Pass auth token so the backend can filter out blocked users' posts
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await axios.get(`${API}/posts`, { params, headers });
-      setPosts(res.data);
+      const { posts: newPosts, hasMore: more } = res.data;
+      setPosts((prev) => append ? [...prev, ...newPosts] : newPosts);
+      setHasMore(more);
     } catch {
-      setPosts([]);
+      if (!append) setPosts([]);
     }
-    setLoading(false);
-  }, [category, search]);
+    if (append) setLoadingMore(false);
+    else setLoading(false);
+  }, [category, debouncedSearch]);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchPosts(nextPage, true);
+  };
 
   const handleLikesClick = async (postId, likesCount) => {
     if (likesCount === 0) return;
@@ -509,7 +536,7 @@ function Home() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPosts();
+    fetchPosts(1, false);
   }, [fetchPosts]);
 
   const handleLike = async (postId) => {
@@ -694,6 +721,25 @@ function Home() {
               ))}
             </div>
           )}
+
+          {/* Load more */}
+          {!loading && hasMore && (
+            <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+              <button
+                className="g-primary-btn"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{ minWidth: 140, fontSize: "13px", padding: "9px 20px" }}
+              >
+                {loadingMore ? (
+                  <><span className="spinner" style={{ width: 14, height: 14, marginRight: 6 }} />Loading...</>
+                ) : (
+                  <><i className="fi fi-sr-angle-down" style={{ marginRight: 6 }} />Load more</>
+                )}
+              </button>
+            </div>
+          )}
+
         </div>
 
         {/* ─── RIGHT SIDEBAR ────────────────────────────────── */}

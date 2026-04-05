@@ -5,6 +5,7 @@ import { useNotificationStore } from "../../store/useNotificationStore";
 import axios from "axios";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./Navbar.css";
+import API from "../../utils/api";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ function Navbar() {
 
   useEffect(() => {
     if (!effectiveUser?._id) return;
-    axios.get(`http://localhost:5000/profiles/${effectiveUser._id}`)
+    axios.get(`${API}/profiles/${effectiveUser._id}`)
       .then(res => {
         if (res.data?.photo) setProfilePhoto(res.data.photo);
       })
@@ -106,7 +107,7 @@ function Navbar() {
     setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_loading" }));
     try {
       await axios.put(
-        `http://localhost:5000/profiles/${senderId}/${action}-follow`,
+        `${API}/profiles/${senderId}/${action}-follow`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

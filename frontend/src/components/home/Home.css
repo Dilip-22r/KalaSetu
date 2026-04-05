@@ -69,12 +69,12 @@
 ══════════════════════════════════════════════════════════════════════════ */
 .home-sidebar {
   position: sticky;
-  top: 82px;
+  top: 90px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: calc(100vh - 100px);
-  min-height: 600px;
+  align-self: start;
+  z-index: 10;
 }
 
 /* ── Welcome Card ─────────────────────────────────────────────────────────── */
@@ -300,10 +300,12 @@
 ══════════════════════════════════════════════════════════════════════════ */
 .home-right-sidebar {
   position: sticky;
-  top: 82px;
+  top: 90px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  align-self: start;
+  z-index: 10;
 }
 
 .info-card {

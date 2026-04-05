@@ -6,7 +6,7 @@ import Navbar from "../components/common/Navbar";
 import { useAuthStore } from "../store/useAuthStore";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 function Search() {
   const navigate = useNavigate();

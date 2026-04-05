@@ -18,6 +18,9 @@ import { app, server } from "./lib/socket.js";
 
 dotenv.config();
 
+// trust proxy is REQUIRED for rate limiters behind Render/Heroku load balancers
+app.set("trust proxy", 1);
+
 // ─── 0. Gzip compression (must be before routes — compresses all responses) ────
 app.use(compression({ threshold: 1024 })); // compress responses > 1KB
 

@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { Block } from "../models/Block.js";
 import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
 import { Notification } from "../models/Notification.js";
+import { Profile } from "../models/Profile.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 const router = express.Router();
@@ -19,6 +20,53 @@ async function getBlockedUserIds(userId) {
   return blocks.map((b) =>
     String(b.blocker) === String(userId) ? String(b.blocked) : String(b.blocker)
   );
+}
+
+// ─── Helper: attach profile photos to user objects ──────────────────────────
+async function attachPhotosToUserObjects(items, isComment = false) {
+  if (!items || (Array.isArray(items) && items.length === 0)) return items;
+
+  const usersToFetch = new Set();
+  const itemList = Array.isArray(items) ? items : [items];
+
+  itemList.forEach((item) => {
+    if (isComment) {
+      if (item.author?._id) usersToFetch.add(String(item.author._id));
+    } else {
+      if (item.author?._id) usersToFetch.add(String(item.author._id));
+      if (item.comments && item.comments.length > 0) {
+        item.comments.forEach((c) => {
+          if (c.author?._id) usersToFetch.add(String(c.author._id));
+        });
+      }
+    }
+  });
+
+  if (usersToFetch.size === 0) return items;
+
+  const profiles = await Profile.find({ user: { $in: Array.from(usersToFetch) } })
+    .select("user photo")
+    .lean();
+
+  const photoMap = {};
+  profiles.forEach((p) => {
+    photoMap[String(p.user)] = p.photo;
+  });
+
+  itemList.forEach((item) => {
+    if (item.author && photoMap[String(item.author._id)]) {
+      item.author.photo = photoMap[String(item.author._id)];
+    }
+    if (!isComment && item.comments) {
+      item.comments.forEach((c) => {
+        if (c.author && photoMap[String(c.author._id)]) {
+          c.author.photo = photoMap[String(c.author._id)];
+        }
+      });
+    }
+  });
+
+  return items;
 }
 
 // ─── GET all posts — block-aware feed ─────────────────────────────────────────
@@ -45,7 +93,11 @@ router.get("/", optionalAuth, async (req, res) => {
 
     const posts = await Post.find(filter)
       .populate("author", "username fullName role")
-      .sort({ createdAt: -1 });
+      .populate("comments.author", "username fullName role")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    await attachPhotosToUserObjects(posts);
 
     res.json(posts);
   } catch (err) {
@@ -56,10 +108,10 @@ router.get("/", optionalAuth, async (req, res) => {
 // ─── GET single post ───────────────────────────────────────────────────────────
 router.get("/:id", optionalAuth, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate(
-      "author",
-      "username fullName role"
-    );
+    const post = await Post.findById(req.params.id)
+      .populate("author", "username fullName role")
+      .populate("comments.author", "username fullName role")
+      .lean();
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     // Block check: neither party should be able to fetch the other's post by ID
@@ -69,6 +121,8 @@ router.get("/:id", optionalAuth, async (req, res) => {
         return res.status(403).json({ message: "Post not available." });
       }
     }
+
+    await attachPhotosToUserObjects(post);
 
     res.json(post);
   } catch (err) {
@@ -104,7 +158,9 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     });
     await post.save();
     const populated = await post.populate("author", "username fullName role");
-    res.status(201).json(populated);
+    const leanPost = populated.toObject();
+    await attachPhotosToUserObjects(leanPost);
+    res.status(201).json(leanPost);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -271,7 +327,9 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     post.comments.push(comment);
     await post.save();
     await post.populate("comments.author", "username fullName role");
-    res.json(post.comments[post.comments.length - 1]);
+    const newComment = post.comments[post.comments.length - 1].toObject();
+    await attachPhotosToUserObjects(newComment, true);
+    res.json(newComment);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -280,11 +338,11 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
 // ─── GET comments ─────────────────────────────────────────────────────────────
 router.get("/:id/comments", async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate(
-      "comments.author",
-      "username fullName role"
-    );
+    const post = await Post.findById(req.params.id)
+      .populate("comments.author", "username fullName role")
+      .lean();
     if (!post) return res.status(404).json({ message: "Post not found" });
+    await attachPhotosToUserObjects(post.comments, true);
     res.json(post.comments);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -331,7 +389,9 @@ router.put("/:id", requireAuth, async (req, res) => {
     post.image = image ?? post.image;
     await post.save();
     const populated = await post.populate("author", "username fullName role");
-    res.json(populated);
+    const leanPost = populated.toObject();
+    await attachPhotosToUserObjects(leanPost);
+    res.json(leanPost);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

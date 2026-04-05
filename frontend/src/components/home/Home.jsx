@@ -134,7 +134,13 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
       <div className="post-header-simple">
         {/* Author info on left */}
         <div className="post-author post-author-top" onClick={() => navigate(`/profile/${post.author?._id}`)}>          
-          <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+          <div className="author-avatar">
+            {post.author?.photo ? (
+              <img src={post.author.photo} alt={post.author.fullName} className="welcome-avatar-img" />
+            ) : (
+              post.author?.username?.[0]?.toUpperCase()
+            )}
+          </div>
           <div>
             <span className="author-name">{post.author?.fullName}</span>
             <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
@@ -170,11 +176,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
           </div>
         )}
 
-        <div className="post-footer">
-          <button className="view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
-            <i className="fi fi-sr-expand" />
-          </button>
-        </div>
+
 
         <div className="post-actions">
           {/* Like */}
@@ -255,6 +257,10 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
               <i className="fi fi-sr-trash" />
             </button>
           )}
+
+          <button className="post-action-btn view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
+            <i className="fi fi-sr-expand" />
+          </button>
         </div>
 
         {/* Comments panel */}
@@ -268,10 +274,15 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                   {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
                   {comments.map((c, i) => (
                     <div key={c._id || i} className="comment-item">
-                      <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                      <div className="comment-avatar">
+                        {c.author?.photo ? (
+                          <img src={c.author.photo} alt={c.author.fullName} className="welcome-avatar-img" style={{ borderRadius: "50%" }} />
+                        ) : (
+                          c.author?.username?.[0]?.toUpperCase()
+                        )}
+                      </div>
                       <div className="comment-body">
                         <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
-                        <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
                         <p className="comment-text">{c.text}</p>
                       </div>
                       {currentUser?._id === c.author?._id && (
@@ -319,7 +330,13 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                 </div>
                 <h2 className="full-post-title">{post.title}</h2>
                 <div className="full-post-author" onClick={() => { setShowFullPost(false); navigate(`/profile/${post.author?._id}`); }}>
-                  <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+                  <div className="author-avatar">
+                    {post.author?.photo ? (
+                      <img src={post.author.photo} alt={post.author.fullName} className="welcome-avatar-img" />
+                    ) : (
+                      post.author?.username?.[0]?.toUpperCase()
+                    )}
+                  </div>
                   <div>
                     <span className="author-name">{post.author?.fullName}</span>
                     <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
@@ -342,10 +359,15 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                         {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
                         {comments.map((c, i) => (
                           <div key={c._id || i} className="comment-item">
-                            <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                            <div className="comment-avatar">
+                              {c.author?.photo ? (
+                                <img src={c.author.photo} alt={c.author.fullName} className="welcome-avatar-img" style={{ borderRadius: "50%" }} />
+                              ) : (
+                                c.author?.username?.[0]?.toUpperCase()
+                              )}
+                            </div>
                             <div className="comment-body">
-                              <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
-                              <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
+                               <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
                               <p className="comment-text">{c.text}</p>
                             </div>
                             {currentUser?._id === c.author?._id && (

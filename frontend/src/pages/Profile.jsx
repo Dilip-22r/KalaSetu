@@ -325,8 +325,8 @@ function Profile() {
 
       const [profileResult, postsResult, followResult] = await Promise.allSettled([
         axios.get(`${API}/profiles/${userId}`),
-        // Only fetch THIS user's posts — avoid loading the whole feed
-        axios.get(`${API}/posts`, { params: { author: userId, limit: 50 } }),
+        // Fetch both authored posts AND reposts so both tabs populate correctly
+        axios.get(`${API}/posts`, { params: { author: userId, repostedBy: userId, limit: 50 } }),
         token && currentUser
           ? axios.get(`${API}/profiles/${userId}/follow-status`, { headers: authHeader })
           : Promise.resolve(null),

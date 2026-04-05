@@ -24,7 +24,7 @@ const categoryIcons = {
   announcement: "fi fi-sr-megaphone",
 };
 
-export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes, onEdit, onDelete, isOwn, hideRepost }) {
+export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes, onEdit, onDelete, isOwn, hideRepost, useModalForComments }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const disliked = post.dislikes?.includes(currentUser?._id);
@@ -46,15 +46,27 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
   const categoryIconClass = categoryIcons[post.category] || "fi fi-sr-search";
 
   const handleToggleComments = async () => {
-    if (!showComments && comments.length === 0) {
-      setLoadingComments(true);
-      try {
-        const res = await axios.get(`${API}/posts/${post._id}/comments`);
-        setComments(res.data);
-      } catch { setComments([]); }
-      setLoadingComments(false);
+    if (useModalForComments) {
+      setShowFullPost(true);
+      if (comments.length === 0 && (!post.comments || post.comments.length > 0)) {
+        setLoadingComments(true);
+        try {
+          const res = await axios.get(`${API}/posts/${post._id}/comments`);
+          setComments(res.data);
+        } catch { setComments([]); }
+        setLoadingComments(false);
+      }
+    } else {
+      if (!showComments && comments.length === 0) {
+        setLoadingComments(true);
+        try {
+          const res = await axios.get(`${API}/posts/${post._id}/comments`);
+          setComments(res.data);
+        } catch { setComments([]); }
+        setLoadingComments(false);
+      }
+      setShowComments((v) => !v);
     }
-    setShowComments((v) => !v);
   };
 
   const handleAddComment = async (e) => {
@@ -72,6 +84,15 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
       setCommentText("");
     } catch { /* silent */ }
     setSubmitting(false);
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/posts/${post._id}/comments/${commentId}`, { headers: { Authorization: `Bearer ${token}` } });
+      setComments(comments.filter(c => c._id !== commentId));
+    } catch { /* silent */ }
   };
 
   const handleOpenShare = async () => {
@@ -109,22 +130,35 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
 
   return (
     <div className="post-card">
+      {/* Header — Always at the top */}
+      <div className="post-header-simple">
+        {/* Author info on left */}
+        <div className="post-author post-author-top" onClick={() => navigate(`/profile/${post.author?._id}`)}>          
+          <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+          <div>
+            <span className="author-name">{post.author?.fullName}</span>
+            <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
+          </div>
+        </div>
+
+        {/* Category/Date stack on right */}
+        <div className="post-meta-stack">
+          <span className="post-category">
+            <i className={categoryIconClass} /> {post.category}
+          </span>
+          <span className="post-date">
+            {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+          </span>
+        </div>
+      </div>
+
       {post.image && (
         <div className="post-image-wrap">
           <img src={post.image} alt={post.title} className="post-image" />
         </div>
       )}
-      <div className="post-body">
-        <div className="post-meta">
-          <span className="post-category">
-            <i className={categoryIconClass} /> {post.category}
-          </span>
-          <span className="post-date">
-            <i className="fi fi-sr-calendar" />{" "}
-            {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-          </span>
-        </div>
 
+      <div className="post-body">
         <h3 className="post-title">{post.title}</h3>
         <p className="post-content">{post.content}</p>
 
@@ -137,13 +171,6 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
         )}
 
         <div className="post-footer">
-          <div className="post-author" onClick={() => navigate(`/profile/${post.author?._id}`)}>
-            <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
-            <div>
-              <span className="author-name">{post.author?.fullName}</span>
-              <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
-            </div>
-          </div>
           <button className="view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
             <i className="fi fi-sr-expand" />
           </button>
@@ -224,7 +251,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
             </button>
           )}
           {isOwn && onDelete && (
-            <button className="post-action-btn delete" onClick={() => onDelete()} title="Delete" style={{color: "var(--home-accent)"}}>
+            <button className="post-action-btn delete" onClick={() => onDelete()} title="Delete" style={{ color: "var(--home-accent)" }}>
               <i className="fi fi-sr-trash" />
             </button>
           )}
@@ -247,6 +274,11 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                         <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
                         <p className="comment-text">{c.text}</p>
                       </div>
+                      {currentUser?._id === c.author?._id && (
+                        <button className="comment-delete-btn" onClick={() => handleDeleteComment(c._id)} title="Delete comment">
+                          <i className="fi fi-sr-trash" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -267,7 +299,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
       {/* Full post modal — rendered via portal outside card */}
       {showFullPost && createPortal(
         <div className="full-post-overlay" onClick={() => setShowFullPost(false)}>
-          <div className="full-post-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={`full-post-modal ${useModalForComments && post.image ? "instagram-modal" : ""}`} onClick={(e) => e.stopPropagation()}>
             <button className="full-post-close" onClick={() => setShowFullPost(false)}>
               <i className="fi fi-sr-cross" />
             </button>
@@ -277,25 +309,67 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
               </div>
             )}
             <div className="full-post-body">
-              <div className="full-post-meta">
-                <span className="post-category"><i className={categoryIconClass} /> {post.category}</span>
-                <span className="post-date">
-                  <i className="fi fi-sr-calendar" />{" "}
-                  {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-              </div>
-              <h2 className="full-post-title">{post.title}</h2>
-              <div className="full-post-author" onClick={() => { setShowFullPost(false); navigate(`/profile/${post.author?._id}`); }}>
-                <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
-                <div>
-                  <span className="author-name">{post.author?.fullName}</span>
-                  <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
+              <div className="full-post-scrollable">
+                <div className="full-post-meta">
+                  <span className="post-category"><i className={categoryIconClass} /> {post.category}</span>
+                  <span className="post-date">
+                    <i className="fi fi-sr-calendar" />{" "}
+                    {new Date(post.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
                 </div>
+                <h2 className="full-post-title">{post.title}</h2>
+                <div className="full-post-author" onClick={() => { setShowFullPost(false); navigate(`/profile/${post.author?._id}`); }}>
+                  <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+                  <div>
+                    <span className="author-name">{post.author?.fullName}</span>
+                    <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
+                  </div>
+                </div>
+                <p className="full-post-content">{post.content}</p>
+                {post.tags?.length > 0 && (
+                  <div className="post-tags">
+                    {post.tags.map((tag, i) => <span key={i} className="tag">#{tag}</span>)}
+                  </div>
+                )}
+
+                {/* Optional Comments section within Instagram modal */}
+                {useModalForComments && (
+                  <div className="comments-section modal-comments">
+                    {loadingComments ? (
+                      <div className="comments-loading"><div className="spinner" /></div>
+                    ) : (
+                      <div className="comments-list">
+                        {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
+                        {comments.map((c, i) => (
+                          <div key={c._id || i} className="comment-item">
+                            <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                            <div className="comment-body">
+                              <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
+                              <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
+                              <p className="comment-text">{c.text}</p>
+                            </div>
+                            {currentUser?._id === c.author?._id && (
+                              <button className="comment-delete-btn" onClick={() => handleDeleteComment(c._id)} title="Delete comment">
+                                <i className="fi fi-sr-trash" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="full-post-content">{post.content}</p>
-              {post.tags?.length > 0 && (
-                <div className="post-tags">
-                  {post.tags.map((tag, i) => <span key={i} className="tag">#{tag}</span>)}
+
+              {/* Input section fixed at bottom for Instagram modal */}
+              {useModalForComments && currentUser && (
+                <div className="modal-comment-input-wrap">
+                  <form className="comment-form" onSubmit={handleAddComment}>
+                    <input className="comment-input" placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} disabled={submitting} />
+                    <button className="comment-submit" type="submit" disabled={submitting || !commentText.trim()}>
+                      <i className="fi fi-sr-paper-plane" />
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
@@ -366,6 +440,16 @@ function Home() {
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    axios.get(`${API}/profiles/${user._id}`)
+      .then((res) => {
+        if (res.data?.photo) setProfilePhoto(res.data.photo);
+      })
+      .catch(() => { });
+  }, [user?._id]);
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -373,7 +457,10 @@ function Home() {
       const params = {};
       if (search) params.search = search;
       if (category) params.category = category;
-      const res = await axios.get(`${API}/posts`, { params });
+      const token = localStorage.getItem("token");
+      // Pass auth token so the backend can filter out blocked users' posts
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/posts`, { params, headers });
       setPosts(res.data);
     } catch {
       setPosts([]);
@@ -414,11 +501,11 @@ function Home() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== user._id)
           : [...post.likes, user._id];
-        
+
         const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
           ? post.dislikes.filter((id) => id !== user._id)
           : post.dislikes || [];
-          
+
         return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
@@ -443,11 +530,11 @@ function Home() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== user._id)
         : [...(post.dislikes || []), user._id];
-        
+
       const updatedLikes = !isDisliked && post.likes?.includes(user._id)
         ? post.likes.filter((id) => id !== user._id)
         : post.likes || [];
-        
+
       return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
@@ -490,7 +577,11 @@ function Home() {
           <div className="welcome-banner">
             <div className="welcome-user-row">
               <div className="welcome-avatar">
-                {user.fullName?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()}
+                {profilePhoto ? (
+                  <img src={profilePhoto} alt="Profile" className="welcome-avatar-img" />
+                ) : (
+                  user.fullName?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()
+                )}
               </div>
               <div className="welcome-text">
                 <h2>Hi, {user.fullName?.split(" ")[0]}</h2>
@@ -589,7 +680,7 @@ function Home() {
             <h3>About KalaSetu</h3>
             <p>Empowering traditional artisans by bridging the gap between centuries-old craftsmanship and modern digital platforms.</p>
           </div>
-          
+
           <div className="info-card">
             <h3>Why Join Us?</h3>
             <ul>
@@ -598,7 +689,7 @@ function Home() {
               <li><i className="fi fi-sr-hands-heart" /> Support NGOs</li>
             </ul>
           </div>
-          
+
           <div className="info-card">
             <h3>Platform Stats</h3>
             <ul>

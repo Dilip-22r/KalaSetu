@@ -25,16 +25,7 @@ function EditProfile() {
   const [zoom, setZoom] = useState(1);
   const [croppedPx, setCroppedPx] = useState(null);
 
-  // Notification Retention State
-  const [retentionOption, setRetentionOption] = useState("0");
-  const [customDays, setCustomDays] = useState(7);
-
-  // Delete Account State
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  // Settings state moved to SettingsModal
 
   const {
     register,
@@ -44,7 +35,8 @@ function EditProfile() {
     formState: { errors },
   } = useForm();
 
-  const selectedRole = watch("userType");
+  // Derive role from registration — not editable
+  const selectedRole = currentUser.role === "ngo" ? "NGO" : "Artisan";
 
   useEffect(() => {
     if (!currentUser || currentUser.role === "user") {
@@ -62,20 +54,10 @@ function EditProfile() {
         setValue("skills", profile.skills || "");
         setValue("location", profile.location || "");
         setValue("about", profile.about || "");
-        setValue("userType", profile.userType || (currentUser.role === "artisan" ? "Artisan" : "NGO"));
         setValue("organizationName", profile.organizationName || "");
         setValue("organizationId", profile.organizationId || "");
         setValue("verificationDocument", profile.verificationDocument || "");
-        setValue("isPrivate", profile.isPrivate || false);
-        
-        const retDays = profile.notificationRetentionDays || 0;
-        if ([0, 1, 7, 30].includes(retDays)) {
-          setRetentionOption(retDays.toString());
-        } else {
-          setRetentionOption("custom");
-          setCustomDays(retDays);
-        }
-
+        setValue("isPrivate", profile.isPrivate ? "true" : "false");
         if (profile.photo) setPreviewPhoto(profile.photo);
       } catch {
         // No profile yet, fall back to defaults.
@@ -165,12 +147,10 @@ function EditProfile() {
           location: data.location,
           about: data.about,
           photo: previewPhoto,
-          userType: data.userType,
           organizationName: data.organizationName,
           organizationId: data.organizationId,
           verificationDocument: data.verificationDocument,
-          isPrivate: data.isPrivate,
-          notificationRetentionDays: retentionOption === "custom" ? parseInt(customDays) || 0 : parseInt(retentionOption),
+          isPrivate: data.isPrivate === "true" || data.isPrivate === true,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -182,24 +162,7 @@ function EditProfile() {
     setLoading(false);
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmation !== "DELETE" || !deletePassword) return;
-    setDeleting(true);
-    setDeleteError("");
-    try {
-      await axios.delete(`${API}/auth/account`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { password: deletePassword },
-      });
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      window.location.href = "/";
-    } catch (err) {
-      setDeleteError(err.response?.data?.message || "Failed to delete account");
-      setDeleting(false);
-    }
-  };
-
+  // Delete account function moved to SettingsModal
   if (fetching) {
     return (
       <div className="theme-bg">
@@ -337,13 +300,15 @@ function EditProfile() {
 
             <div className="ep-row">
               <div className="ep-field">
-                <label>User Type *</label>
-                <select {...register("userType", { required: "Please select a type" })}>
-                  <option value="">Select type</option>
-                  <option>Artisan</option>
-                  <option>NGO</option>
-                </select>
-                {errors.userType && <small>{errors.userType.message}</small>}
+                <label>Role</label>
+                <input
+                  type="text"
+                  value={currentUser.role === "artisan" ? "Artisan" : currentUser.role === "ngo" ? "NGO" : "User"}
+                  readOnly
+                  disabled
+                  style={{ opacity: 0.7, cursor: "not-allowed", background: "#f5f5f5" }}
+                  title="Role cannot be changed after registration"
+                />
               </div>
 
               <div className="ep-field">
@@ -359,11 +324,12 @@ function EditProfile() {
               {errors.about && <small>{errors.about.message}</small>}
             </div>
 
-            <div className="ep-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "8px" }}>
-              <input type="checkbox" id="privateProfile" style={{ width: "22px", height: "22px" }} {...register("isPrivate")} />
-              <label htmlFor="privateProfile" style={{ cursor: "pointer", fontSize: "14px" }}>
-                Make profile private (only visible to followers)
-              </label>
+            <div className="ep-field">
+              <label>Profile Privacy</label>
+              <select {...register("isPrivate")} style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", outline: "none" }}>
+                <option value="false">Public — visible to everyone</option>
+                <option value="true">Private — only visible to followers</option>
+              </select>
             </div>
 
             <button type="submit" className="ep-submit" disabled={loading}>
@@ -372,53 +338,7 @@ function EditProfile() {
           </form>
         </div>
 
-        <div className="ep-card">
-          <div className="ep-card-header">
-            <h2>Notification Preferences</h2>
-            <p>Automatically delete old notifications to keep your feed clean.</p>
-          </div>
-          <div className="ep-card-body" style={{ marginTop: "16px" }}>
-            <div className="ep-field">
-              <label>Delete Notifications After</label>
-              <select
-                className="ep-select"
-                style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "100%", outline: "none", fontSize: "14px" }}
-                value={retentionOption}
-                onChange={(e) => setRetentionOption(e.target.value)}
-              >
-                <option value="0">Never (Keep Forever)</option>
-                <option value="1">1 Day</option>
-                <option value="7">7 Days</option>
-                <option value="30">30 Days</option>
-                <option value="custom">Custom (Days)</option>
-              </select>
-            </div>
-            
-            {retentionOption === "custom" && (
-              <div className="ep-field" style={{ marginTop: "16px" }}>
-                <label>Custom Number of Days</label>
-                <input
-                  type="number"
-                  style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", width: "100%", outline: "none", fontSize: "14px" }}
-                  min="1"
-                  value={customDays}
-                  onChange={(e) => setCustomDays(e.target.value)}
-                  placeholder="e.g. 14"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="ep-card danger-zone">
-          <h3 className="danger-title">Danger Zone</h3>
-          <p className="danger-desc">
-            Once you delete your account, there is no going back. All your data, posts, messages, and profile information will be permanently erased. Please be certain.
-          </p>
-          <button type="button" className="danger-btn" onClick={() => setShowDeleteModal(true)}>
-            Delete Account
-          </button>
-        </div>
+        {/* Settings have been moved to Navbar Settings dropdown */}
       </div>
 
       {rawImage && (
@@ -461,62 +381,7 @@ function EditProfile() {
         </div>
       )}
 
-      {showDeleteModal && (
-        <div className="ep-delete-overlay">
-          <div className="ep-delete-modal">
-            <h3>Delete Account</h3>
-            <p>This action is permanent and cannot be undone. To verify, please enter your password and type <strong>DELETE</strong> below.</p>
-            
-            {deleteError && <div className="ep-error">{deleteError}</div>}
-
-            <div className="ep-delete-field">
-              <label>Password</label>
-              <input
-                type="password"
-                className="ep-delete-input"
-                placeholder="Enter your current password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-              />
-            </div>
-
-            <div className="ep-delete-field">
-              <label>Type DELETE</label>
-              <input
-                type="text"
-                className="ep-delete-input"
-                placeholder="DELETE"
-                value={deleteConfirmation}
-                onChange={(e) => setDeleteConfirmation(e.target.value)}
-              />
-            </div>
-
-            <div className="ep-delete-actions">
-              <button
-                type="button"
-                className="ep-delete-cancel"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeletePassword("");
-                  setDeleteConfirmation("");
-                  setDeleteError("");
-                }}
-                disabled={deleting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="ep-delete-confirm"
-                onClick={handleDeleteAccount}
-                disabled={deleteConfirmation !== "DELETE" || !deletePassword || deleting}
-              >
-                {deleting ? "Deleting..." : "Confirm Deletion"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete modal moved to SettingsModal */}
     </div>
   );
 }

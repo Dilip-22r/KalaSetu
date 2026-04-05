@@ -50,11 +50,11 @@ function Search() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== user._id)
           : [...post.likes, user._id];
-          
+
         const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
           ? post.dislikes.filter((id) => id !== user._id)
           : post.dislikes || [];
-          
+
         return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
@@ -80,11 +80,11 @@ function Search() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== user._id)
         : [...(post.dislikes || []), user._id];
-        
+
       const updatedLikes = !isDisliked && post.likes?.includes(user._id)
         ? post.likes.filter((id) => id !== user._id)
         : post.likes || [];
-        
+
       return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
@@ -244,7 +244,7 @@ function Search() {
             <p>No posts found</p>
           </div>
         ) : (
-          <div className="explore-feed" style={{ maxWidth: "550px", margin: "0 auto", padding: "20px 0" }}>
+          <div className="explore-feed">
             <div className="posts-grid">
               {posts.map((post) => (
                 <PostCard
@@ -255,6 +255,7 @@ function Search() {
                   onDislike={handleDislike}
                   onRepost={handleRepost}
                   onShowLikes={handleLikesClick}
+                  useModalForComments={true}
                 />
               ))}
             </div>

@@ -69,6 +69,10 @@ function Profile() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [moreModal, setMoreModal] = useState(null);
   const [moreToast, setMoreToast] = useState("");
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
@@ -80,6 +84,27 @@ function Profile() {
 
   const isOwn = currentUser && currentUser._id === userId;
   const { socket } = useAuthStore();
+
+  // Fetch block status when viewing another user's profile
+  useEffect(() => {
+    if (isOwn || !currentUser || !token) return;
+    axios
+      .get(`${API}/reports/block-status/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setIsBlocked(res.data.isBlocked))
+      .catch(() => {});
+  }, [userId, isOwn]);
+
+  const handleUnblock = async () => {
+    try {
+      await axios.post(`${API}/reports/unblock/${userId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setIsBlocked(false);
+      setMoreToast("User unblocked.");
+      setTimeout(() => setMoreToast(""), 3000);
+    } catch {
+      setMoreToast("Failed to unblock. Please try again.");
+      setTimeout(() => setMoreToast(""), 3000);
+    }
+  };
 
   const handleFollowersClick = async () => {
     setFollowersModalOpen(true);
@@ -182,15 +207,38 @@ function Profile() {
     setMoreModal(action);
   };
 
-  const confirmMoreAction = () => {
-    const message =
-      moreModal === "block"
-        ? "User has been blocked."
-        : "Report submitted. Our team will review it shortly.";
-
+  const confirmMoreAction = async () => {
+    if (moreModal === "report" && !reportReason) {
+      setMoreToast("Please select a reason for the report.");
+      setTimeout(() => setMoreToast(""), 3000);
+      return;
+    }
+    setMoreLoading(true);
+    try {
+      if (moreModal === "block") {
+        await axios.post(
+          `${API}/reports/block/${userId}`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsBlocked(true);
+        setMoreToast("User has been blocked. You can unblock them from your settings.");
+      } else {
+        await axios.post(
+          `${API}/reports/report/${userId}`,
+          { reason: reportReason, details: reportDetails },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setMoreToast("Report submitted. Our team will review it shortly.");
+      }
+    } catch (err) {
+      setMoreToast(err.response?.data?.message || "Something went wrong. Please try again.");
+    }
     setMoreModal(null);
-    setMoreToast(message);
-    setTimeout(() => setMoreToast(""), 3000);
+    setMoreLoading(false);
+    setReportReason("");
+    setReportDetails("");
+    setTimeout(() => setMoreToast(""), 4000);
   };
 
   const handleLikesClick = async (postId, likesCount) => {
@@ -219,11 +267,11 @@ function Profile() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== currentUser._id)
           : [...post.likes, currentUser._id];
-          
+
         const updatedDislikes = !isLiked && post.dislikes?.includes(currentUser._id)
           ? post.dislikes.filter((id) => id !== currentUser._id)
           : post.dislikes || [];
-          
+
         return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
@@ -241,11 +289,11 @@ function Profile() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== currentUser._id)
         : [...(post.dislikes || []), currentUser._id];
-        
+
       const updatedLikes = !isDisliked && post.likes?.includes(currentUser._id)
         ? post.likes.filter((id) => id !== currentUser._id)
         : post.likes || [];
-        
+
       return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
@@ -332,7 +380,6 @@ function Profile() {
             <div className="prof-cover">
               <div className="prof-cover-content">
                 <span className="prof-cover-kicker">KalaSetu Profile</span>
-                <p>Create a trusted cultural profile that tells people what you do and how to connect.</p>
               </div>
             </div>
 
@@ -483,11 +530,12 @@ function Profile() {
 
             <div className="prof-hero-actions">
               {isOwn && (
-                <button className="prof-secondary-btn" onClick={handleEditClick}>
+                <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
+                  <i className="fi fi-sr-pencil" />
                   Edit Profile
                 </button>
               )}
-              {currentUser && !isOwn && (
+              {currentUser && !isOwn && !isBlocked && (
                 <button
                   className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
                   style={requested ? { background: "rgba(47, 111, 109, 0.15)", color: "var(--brand-900)" } : {}}
@@ -499,9 +547,14 @@ function Profile() {
                 </button>
               )}
               {currentUser && !isOwn && (
-                <button className="prof-secondary-btn" onClick={handleMessageClick}>
+                <button
+                  className={`prof-secondary-btn${isBlocked ? " prof-btn-disabled" : ""}`}
+                  onClick={isBlocked ? undefined : handleMessageClick}
+                  title={isBlocked ? "Messaging unavailable" : "Send a message"}
+                  disabled={isBlocked}
+                >
                   <i className="fi fi-sr-comments" />
-                  Message
+                  {isBlocked ? "Messaging unavailable" : "Message"}
                 </button>
               )}
               {currentUser && !isOwn && (
@@ -517,8 +570,8 @@ function Profile() {
                     <>
                       <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
                       <div className="prof-more-dropdown">
-                        <button onClick={() => handleMoreAction("block")}>Block user</button>
-                        <button onClick={() => handleMoreAction("report")}>Report user</button>
+                        <button onClick={() => isBlocked ? handleUnblock() : handleMoreAction("block")}>{isBlocked ? "Unblock user" : "Block user"}</button>
+                        {!isBlocked && <button onClick={() => handleMoreAction("report")}>Report user</button>}
                       </div>
                     </>
                   )}
@@ -676,26 +729,52 @@ function Profile() {
       </div>
 
       {moreModal && (
-        <div className="prof-logout-overlay" onClick={() => setMoreModal(null)}>
+        <div className="prof-logout-overlay" onClick={() => { setMoreModal(null); setReportReason(""); setReportDetails(""); }}>
           <div className="prof-more-modal" onClick={(event) => event.stopPropagation()}>
             <div className="prof-empty-icon modal-icon">
-              <i className="fi fi-sr-user" />
+              <i className={moreModal === "block" ? "fi fi-sr-ban" : "fi fi-sr-flag"} />
             </div>
             <h3 className="display-serif">{moreModal === "block" ? "Block User" : "Report User"}</h3>
             <p>
               {moreModal === "block"
-                ? "They will not be able to find your profile or send you messages."
-                : "We will review this account and take action if it violates community guidelines."}
+                ? "They will not be able to find your profile, view your posts, or send you messages."
+                : "We will review this account and take action if it violates our community guidelines."}
             </p>
+            {moreModal === "report" && (
+              <div className="prof-report-form">
+                <select
+                  className="prof-report-select"
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                >
+                  <option value="">Select a reason *</option>
+                  <option value="spam">Spam or fake account</option>
+                  <option value="harassment">Harassment or bullying</option>
+                  <option value="hate_speech">Hate speech or discrimination</option>
+                  <option value="misinformation">Misinformation</option>
+                  <option value="impersonation">Impersonation</option>
+                  <option value="inappropriate_content">Inappropriate content</option>
+                  <option value="other">Other</option>
+                </select>
+                <textarea
+                  className="prof-report-details"
+                  placeholder="Additional details (optional)"
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="prof-logout-actions">
-              <button className="prof-secondary-btn" onClick={() => setMoreModal(null)}>
+              <button className="prof-secondary-btn" onClick={() => { setMoreModal(null); setReportReason(""); setReportDetails(""); }}>
                 Cancel
               </button>
               <button
                 className={moreModal === "block" ? "prof-block-confirm" : "prof-report-confirm"}
                 onClick={confirmMoreAction}
+                disabled={moreLoading || (moreModal === "report" && !reportReason)}
               >
-                {moreModal === "block" ? "Block" : "Submit Report"}
+                {moreLoading ? "Please wait..." : moreModal === "block" ? "Block" : "Submit Report"}
               </button>
             </div>
           </div>

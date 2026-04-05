@@ -327,6 +327,22 @@
   box-shadow: 0 10px 22px rgba(43, 43, 43, 0.08);
 }
 
+/* Edit Profile button — icon + stronger border */
+.prof-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--brand-700) !important;
+  color: var(--brand-700) !important;
+  background: transparent !important;
+  font-weight: 700;
+}
+
+.prof-edit-btn:hover {
+  background: rgba(47, 111, 109, 0.08) !important;
+  box-shadow: 0 4px 14px rgba(47, 111, 109, 0.16) !important;
+}
+
 .prof-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;
@@ -1170,4 +1186,56 @@
   flex-shrink: 0;
   border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* ── Report form inside modal ── */
+.prof-report-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.prof-report-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(184, 92, 56, 0.25);
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #1a1a1a);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.prof-report-select:focus {
+  border-color: #b85c38;
+}
+
+.prof-report-details {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(184, 92, 56, 0.2);
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #1a1a1a);
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.prof-report-details:focus {
+  border-color: #b85c38;
+}
+
+.prof-block-confirm:disabled,
+.prof-report-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

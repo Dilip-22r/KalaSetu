@@ -5,9 +5,10 @@ import Navbar from "../components/common/Navbar";
 import "./Profile.css";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
+import { ProfileHeaderSkeleton, PostSkeleton } from "../components/common/Skeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 const getRoleLabel = (role) => {
   if (role === "artisan") return "Artisan";
@@ -319,45 +320,55 @@ function Profile() {
 
   useEffect(() => {
     const loadProfileData = async () => {
-      try {
-        const profileRes = await axios.get(`${API}/profiles/${userId}`);
-        setProfile(profileRes.data);
-      } catch (err) {
-        if (err.response?.status === 404) setNotFound(true);
-        console.error("Error fetching profile:", err);
-      } finally {
-        setLoading(false);
-      }
+      // Fire all three requests in parallel
+      const token = localStorage.getItem("token");
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
 
-      try {
-        const postsRes = await axios.get(`${API}/posts`);
-        const allPosts = postsRes.data;
+      const [profileResult, postsResult, followResult] = await Promise.allSettled([
+        axios.get(`${API}/profiles/${userId}`),
+        // Fetch both authored posts AND reposts so both tabs populate correctly
+        axios.get(`${API}/posts`, { params: { author: userId, repostedBy: userId, limit: 50 } }),
+        token && currentUser
+          ? axios.get(`${API}/profiles/${userId}/follow-status`, { headers: authHeader })
+          : Promise.resolve(null),
+      ]);
+
+      if (profileResult.status === "fulfilled") {
+        setProfile(profileResult.value.data);
+      } else {
+        if (profileResult.reason?.response?.status === 404) setNotFound(true);
+      }
+      setLoading(false);
+
+      if (postsResult.status === "fulfilled") {
+        // Handle both paginated { posts } and plain array responses
+        const data = postsResult.value.data;
+        const allPosts = Array.isArray(data) ? data : (data.posts || []);
         setPosts(allPosts);
-      } catch (err) {
+      } else {
         setPosts([]);
-        console.error("Error fetching user posts:", err);
       }
 
-      if (currentUser && token) {
-        try {
-          const fsRes = await axios.get(`${API}/profiles/${userId}/follow-status`, { headers: { Authorization: `Bearer ${token}` } });
-          setFollowing(fsRes.data.following);
-          setRequested(fsRes.data.requested);
-          setFollowersCount(fsRes.data.followersCount);
-        } catch { /* silent */ }
+      if (followResult.status === "fulfilled" && followResult.value) {
+        setFollowing(followResult.value.data.following);
+        setRequested(followResult.value.data.requested);
+        setFollowersCount(followResult.value.data.followersCount);
       }
     };
 
     loadProfileData();
   }, [userId]);
 
+
   if (loading) {
     return (
       <div className="prof-bg">
         <Navbar />
-        <div className="prof-loading">
-          <div className="prof-spinner" />
-          <p>Loading profile...</p>
+        <div className="prof-container" style={{ marginTop: "24px" }}>
+          <ProfileHeaderSkeleton />
+          <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto" }}>
+            {[...Array(2)].map((_, i) => <PostSkeleton key={i} />)}
+          </div>
         </div>
       </div>
     );

@@ -57,10 +57,21 @@
 @media (max-width: 768px) {
   .home-container {
     grid-template-columns: 1fr;
+    padding: 12px 0 80px; /* Space for bottom nav */
+    gap: 16px;
   }
 
-  .home-sidebar {
+  .home-sidebar,
+  .home-right-sidebar {
     display: none !important;
+  }
+
+  /* Ensure the feed and create post are centered and full width */
+  .home-feed, 
+  .create-post {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 var(--mobile-pad);
   }
 }
 
@@ -69,12 +80,12 @@
 ══════════════════════════════════════════════════════════════════════════ */
 .home-sidebar {
   position: sticky;
-  top: 82px;
+  top: 90px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: calc(100vh - 100px);
-  min-height: 600px;
+  align-self: start;
+  z-index: 10;
 }
 
 /* ── Welcome Card ─────────────────────────────────────────────────────────── */
@@ -300,10 +311,12 @@
 ══════════════════════════════════════════════════════════════════════════ */
 .home-right-sidebar {
   position: sticky;
-  top: 82px;
+  top: 90px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  align-self: start;
+  z-index: 10;
 }
 
 .info-card {
@@ -856,24 +869,18 @@
 }
 
 .view-full-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 6px;
-  background: var(--home-green-50);
-  color: var(--home-green-700);
-  font-size: 12px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
   margin-left: auto;
+  flex: 0 0 auto !important;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--home-green-50) !important;
+  color: var(--home-green-700) !important;
 }
 
 .view-full-btn:hover {
-  background: var(--home-green-200);
+  background: var(--home-green-200) !important;
+  transform: scale(1.05);
 }
 
 /* Full post modal */

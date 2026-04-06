@@ -1,0 +1,186 @@
+/* Skeleton.css */
+.skeleton-box {
+  background-color: #e2e8f0;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-box::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Post Skeleton Layout */
+.post-skeleton {
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+  max-width: 600px;
+  margin: 0 auto 16px;
+}
+
+.post-skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.post-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.post-skeleton-name {
+  height: 14px;
+  width: 120px;
+  margin-bottom: 6px;
+}
+
+.post-skeleton-badge {
+  height: 10px;
+  width: 60px;
+}
+
+.post-skeleton-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  margin-bottom: 16px;
+}
+
+.post-skeleton-title {
+  height: 18px;
+  width: 70%;
+  margin-bottom: 12px;
+}
+
+.post-skeleton-content {
+  height: 12px;
+  width: 90%;
+  margin-bottom: 8px;
+}
+
+.post-skeleton-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.post-skeleton-action {
+  height: 24px;
+  width: 40px;
+}
+
+/* Profile Card Skeleton (Search Page) */
+.profile-card-skeleton {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.profile-card-skeleton-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+}
+
+.profile-card-skeleton-name {
+  height: 18px;
+  width: 140px;
+  margin-bottom: 10px;
+}
+
+.profile-card-skeleton-role {
+  height: 12px;
+  width: 80px;
+  margin-bottom: 16px;
+}
+
+.profile-card-skeleton-detail {
+  height: 10px;
+  width: 120px;
+  margin-bottom: 8px;
+}
+
+.profile-card-skeleton-btn {
+  height: 38px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* Profile Header Skeleton */
+.prof-header-skeleton {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.prof-cover-skeleton {
+  width: 100%;
+  height: 240px;
+}
+
+.prof-body-skeleton {
+  padding: 0 40px 40px;
+  display: flex;
+  gap: 24px;
+}
+
+.prof-avatar-skeleton {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 4px solid white;
+  margin-top: -80px;
+  flex-shrink: 0;
+}
+
+.prof-info-skeleton {
+  margin-top: 24px;
+  flex: 1;
+}
+
+.prof-name-skeleton {
+  height: 28px;
+  width: 250px;
+  margin-bottom: 12px;
+}
+
+.prof-meta-skeleton {
+  height: 14px;
+  width: 180px;
+  margin-bottom: 8px;
+}
+

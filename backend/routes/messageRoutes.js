@@ -6,22 +6,10 @@ import { Block } from "../models/Block.js";
 import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import { Notification } from "../models/Notification.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage } from "../middleware/imageValidationMiddleware.js";
 
 const router = express.Router();
-
-// ─── Helper: check if either party has blocked the other ─────────────────────
-async function getBlockStatus(userAId, userBId) {
-  const block = await Block.findOne({
-    $or: [
-      { blocker: userAId, blocked: userBId },
-      { blocker: userBId, blocked: userAId },
-    ],
-  }).lean();
-  return {
-    isBlocked: !!block,
-    iBlockedThem: block ? String(block.blocker) === String(userAId) : false,
-  };
-}
 
 // ─── Helper: can A send a message to B? ──────────────────────────────────────
 async function canSendMessage(senderId, receiverId) {
@@ -29,14 +17,25 @@ async function canSendMessage(senderId, receiverId) {
     return { allowed: false, reason: "self" };
   }
 
-  // Block check comes FIRST — before any follow/privacy logic
-  const { isBlocked, iBlockedThem } = await getBlockStatus(senderId, receiverId);
+  // Optimize: Fetch Block status, Profile privacy, and User follower data concurrently!
+  const [block, receiverProfile, receiver] = await Promise.all([
+    Block.findOne({
+      $or: [
+        { blocker: senderId, blocked: receiverId },
+        { blocker: receiverId, blocked: senderId },
+      ],
+    }).lean(),
+    Profile.findOne({ user: receiverId }).lean(),
+    User.findById(receiverId).select("followers followRequests").lean()
+  ]);
+
+  const isBlocked = !!block;
+  const iBlockedThem = block ? String(block.blocker) === String(senderId) : false;
+
+  // Block check comes FIRST
   if (isBlocked) {
-    // Use a generic reason to avoid leaking which direction the block is
     return { allowed: false, reason: iBlockedThem ? "you_blocked" : "unavailable" };
   }
-
-  const receiverProfile = await Profile.findOne({ user: receiverId }).lean();
 
   // Public account — anyone can message
   if (!receiverProfile || !receiverProfile.isPrivate) {
@@ -44,9 +43,6 @@ async function canSendMessage(senderId, receiverId) {
   }
 
   // Private account — sender must be an approved follower
-  const receiver = await User.findById(receiverId)
-    .select("followers followRequests")
-    .lean();
   if (!receiver) return { allowed: false, reason: "not_found" };
 
   const isFollower = receiver.followers.some(
@@ -64,7 +60,7 @@ async function canSendMessage(senderId, receiverId) {
 }
 
 // ─── GET conversations (exclude conversations with blocked users) ──────────────
-router.get("/conversations", requireAuth, requireRole, async (req, res) => {
+router.get("/conversations", requireAuth, requireRole, async (req, res, next) => {
   try {
     const mongoose = (await import("mongoose")).default;
     const userId = req.user.id;
@@ -163,16 +159,22 @@ router.get("/conversations", requireAuth, requireRole, async (req, res) => {
 
     res.json(formatted);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET messages between two users (enforce block check) ─────────────────────
-router.get("/:userId", requireAuth, requireRole, async (req, res) => {
+router.get("/:userId", requireAuth, requireRole, async (req, res, next) => {
   try {
     // Block guard — if either side has blocked, deny reading history too
-    const { isBlocked } = await getBlockStatus(req.user.id, req.params.userId);
-    if (isBlocked) {
+    const block = await Block.findOne({
+      $or: [
+        { blocker: req.user.id, blocked: req.params.userId },
+        { blocker: req.params.userId, blocked: req.user.id },
+      ],
+    }).lean();
+
+    if (block) {
       // Return empty array — don't reveal block direction
       return res.json([]);
     }
@@ -208,12 +210,12 @@ router.get("/:userId", requireAuth, requireRole, async (req, res) => {
 
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CHECK if current user can message another user ───────────────────────────
-router.get("/can-message/:userId", requireAuth, async (req, res) => {
+router.get("/can-message/:userId", requireAuth, async (req, res, next) => {
   try {
     const result = await canSendMessage(req.user.id, req.params.userId);
     if (result.allowed) return res.json({ canMessage: true });
@@ -233,12 +235,12 @@ router.get("/can-message/:userId", requireAuth, async (req, res) => {
       reason: friendlyReasons[result.reason] || "messaging_unavailable",
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
-// ─── SEND message ─────────────────────────────────────────────────────────────
-router.post("/", requireAuth, requireRole, async (req, res) => {
+// ─── SEND message ─────────────────────────────────────────────────────────────────
+router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const { receiverId, text, replyTo, sharedPostId, image } = req.body;
 
@@ -275,27 +277,33 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
       return res.status(400).json({ message: "Message must contain text or an image." });
     }
 
-    await msg.save();
-    const populated = await msg.populate([
-      { path: "sender", select: "username fullName" },
-      { path: "replyTo", select: "text sender" },
-      {
-        path: "sharedPost",
-        populate: [{ path: "author", select: "username fullName photo" }],
-      },
-    ]);
-
-    if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populated);
-
-    // Notification
+    // 1. Fire and save message and notification concurrently
     const newNotif = new Notification({
       recipient: receiverId,
       sender: req.user.id,
       type: "message",
       message: msg._id,
     });
-    await newNotif.save();
-    const populatedNotif = await newNotif.populate("sender", "username fullName");
+
+    const [savedMsg, savedNotif] = await Promise.all([
+      msg.save(),
+      newNotif.save()
+    ]);
+
+    // 2. Populate both concurrently
+    const [populated, populatedNotif] = await Promise.all([
+      savedMsg.populate([
+        { path: "sender", select: "username fullName" },
+        { path: "replyTo", select: "text sender" },
+        {
+          path: "sharedPost",
+          populate: [{ path: "author", select: "username fullName photo" }],
+        },
+      ]),
+      savedNotif.populate("sender", "username fullName")
+    ]);
+
+    if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populated);
     if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populatedNotif);
 
     const senderSocketId = getReceiverSocketId(req.user.id);
@@ -307,12 +315,12 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
 
     res.status(201).json(populated);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE single message (soft delete for sender only) ──────────────────────
-router.delete("/:messageId", requireAuth, async (req, res) => {
+router.delete("/:messageId", requireAuth, async (req, res, next) => {
   try {
     const msg = await Message.findById(req.params.messageId);
     if (!msg) return res.status(404).json({ message: "Message not found" });
@@ -331,12 +339,12 @@ router.delete("/:messageId", requireAuth, async (req, res) => {
     }
     res.json({ messageId: msg._id, deleted: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CLEAR chat for current user only ─────────────────────────────────────────
-router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) => {
+router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res, next) => {
   try {
     const userId = req.user.id;
     const partnerId = req.params.partnerId;
@@ -353,12 +361,12 @@ router.delete("/clear/:partnerId", requireAuth, requireRole, async (req, res) =>
     );
     res.json({ message: "Chat cleared for you" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE FOR ME only ────────────────────────────────────────────────────────
-router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
+router.delete("/:messageId/for-me", requireAuth, async (req, res, next) => {
   try {
     const msg = await Message.findById(req.params.messageId);
     if (!msg) return res.status(404).json({ message: "Message not found" });
@@ -374,7 +382,7 @@ router.delete("/:messageId/for-me", requireAuth, async (req, res) => {
     }
     res.json({ messageId: msg._id, hiddenForMe: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

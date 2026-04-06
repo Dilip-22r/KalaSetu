@@ -9,7 +9,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import "./Register.css";
 import Navbar from "../common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../../utils/api";
 
 function Register() {
   const navigate = useNavigate();

@@ -1,11 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import "./Home.css";
 import Navbar from "../common/Navbar";
+import { useFeedStore } from "../../store/useFeedStore";
+import { PostSkeleton } from "../common/Skeleton";
 
-const API = "http://localhost:5000";
+import API from "../../utils/api";
 
 const CATEGORIES = [
   { value: "", label: "All Posts", icon: "fi-sr-apps" },
@@ -134,7 +137,13 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
       <div className="post-header-simple">
         {/* Author info on left */}
         <div className="post-author post-author-top" onClick={() => navigate(`/profile/${post.author?._id}`)}>          
-          <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+          <div className="author-avatar">
+            {post.author?.photo ? (
+              <img src={post.author.photo} alt={post.author.fullName} className="welcome-avatar-img" />
+            ) : (
+              post.author?.username?.[0]?.toUpperCase()
+            )}
+          </div>
           <div>
             <span className="author-name">{post.author?.fullName}</span>
             <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
@@ -170,16 +179,17 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
           </div>
         )}
 
-        <div className="post-footer">
-          <button className="view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
-            <i className="fi fi-sr-expand" />
-          </button>
-        </div>
+
 
         <div className="post-actions">
           {/* Like */}
           <button className={`post-action-btn like ${liked ? "active" : ""}`} onClick={() => onLike(post._id)} disabled={!currentUser} title="Like">
-            <i className="fi fi-sr-heart" />
+            <motion.i 
+              className="fi fi-sr-heart"
+              initial={false}
+              animate={liked ? { scale: [1, 1.4, 1.2], filter: ["none", "drop-shadow(0 0 8px rgba(255, 0, 0, 0.4))", "none"] } : { scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            />
             <span className="action-count" onClick={(e) => { e.stopPropagation(); onShowLikes(post._id, post.likes?.length || 0); }}>
               {post.likes?.length || 0}
             </span>
@@ -255,6 +265,10 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
               <i className="fi fi-sr-trash" />
             </button>
           )}
+
+          <button className="post-action-btn view-full-btn" onClick={() => setShowFullPost(true)} title="View full post">
+            <i className="fi fi-sr-expand" />
+          </button>
         </div>
 
         {/* Comments panel */}
@@ -268,10 +282,15 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                   {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
                   {comments.map((c, i) => (
                     <div key={c._id || i} className="comment-item">
-                      <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                      <div className="comment-avatar">
+                        {c.author?.photo ? (
+                          <img src={c.author.photo} alt={c.author.fullName} className="welcome-avatar-img" style={{ borderRadius: "50%" }} />
+                        ) : (
+                          c.author?.username?.[0]?.toUpperCase()
+                        )}
+                      </div>
                       <div className="comment-body">
                         <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
-                        <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
                         <p className="comment-text">{c.text}</p>
                       </div>
                       {currentUser?._id === c.author?._id && (
@@ -319,7 +338,13 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                 </div>
                 <h2 className="full-post-title">{post.title}</h2>
                 <div className="full-post-author" onClick={() => { setShowFullPost(false); navigate(`/profile/${post.author?._id}`); }}>
-                  <div className="author-avatar">{post.author?.username?.[0]?.toUpperCase()}</div>
+                  <div className="author-avatar">
+                    {post.author?.photo ? (
+                      <img src={post.author.photo} alt={post.author.fullName} className="welcome-avatar-img" />
+                    ) : (
+                      post.author?.username?.[0]?.toUpperCase()
+                    )}
+                  </div>
                   <div>
                     <span className="author-name">{post.author?.fullName}</span>
                     <span className={`role-badge ${post.author?.role}`}>{post.author?.role}</span>
@@ -342,10 +367,15 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
                         {comments.length === 0 && <p className="no-comments">No comments yet. Be the first!</p>}
                         {comments.map((c, i) => (
                           <div key={c._id || i} className="comment-item">
-                            <div className="comment-avatar">{c.author?.username?.[0]?.toUpperCase()}</div>
+                            <div className="comment-avatar">
+                              {c.author?.photo ? (
+                                <img src={c.author.photo} alt={c.author.fullName} className="welcome-avatar-img" style={{ borderRadius: "50%" }} />
+                              ) : (
+                                c.author?.username?.[0]?.toUpperCase()
+                              )}
+                            </div>
                             <div className="comment-body">
-                              <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
-                              <span className={`role-badge ${c.author?.role}`}>{c.author?.role}</span>
+                               <span className="comment-author">{c.author?.fullName || c.author?.username}</span>
                               <p className="comment-text">{c.text}</p>
                             </div>
                             {currentUser?._id === c.author?._id && (
@@ -433,14 +463,28 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
 function Home() {
   const navigate = useNavigate();
   const [user] = useState(() => JSON.parse(localStorage.getItem("user") || "null"));
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  
+  const {
+    posts, page, hasMore, category, search: storeSearch, loading, loadingMore,
+    setCategory, setSearch: setStoreSearch, fetchPosts, updatePostLikes, updatePostReposts, deletePost
+  } = useFeedStore();
+
+  const [search, setSearch] = useState(storeSearch || "");
+
   const [likesModalPostId, setLikesModalPostId] = useState(null);
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const searchDebounceRef = useRef(null);
+
+  // Debounce search input: 400ms delay before hitting the API
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setStoreSearch(search);
+    }, 400);
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [search, setStoreSearch]);
 
   useEffect(() => {
     if (!user?._id) return;
@@ -451,22 +495,14 @@ function Home() {
       .catch(() => { });
   }, [user?._id]);
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (search) params.search = search;
-      if (category) params.category = category;
-      const token = localStorage.getItem("token");
-      // Pass auth token so the backend can filter out blocked users' posts
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await axios.get(`${API}/posts`, { params, headers });
-      setPosts(res.data);
-    } catch {
-      setPosts([]);
-    }
-    setLoading(false);
-  }, [category, search]);
+  useEffect(() => {
+    // Caching handles preventing unnecessary requests automatically
+    fetchPosts(1, false, false);
+  }, [storeSearch, category, fetchPosts]);
+
+  const handleLoadMore = () => {
+    fetchPosts(page + 1, true);
+  };
 
   const handleLikesClick = async (postId, likesCount) => {
     if (likesCount === 0) return;
@@ -487,28 +523,27 @@ function Home() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPosts();
+    fetchPosts(1, false);
   }, [fetchPosts]);
 
   const handleLike = async (postId) => {
     const token = localStorage.getItem("token");
-    const previousPosts = [...posts];
+    const post = posts.find(p => p._id === postId);
+    if (!post) return;
+    
+    const previousLikes = [...(post.likes || [])];
+    const previousDislikes = [...(post.dislikes || [])];
 
-    setPosts(
-      posts.map((post) => {
-        if (post._id !== postId) return post;
-        const isLiked = post.likes.includes(user._id);
-        const updatedLikes = isLiked
-          ? post.likes.filter((id) => id !== user._id)
-          : [...post.likes, user._id];
+    const isLiked = previousLikes.includes(user._id);
+    const updatedLikes = isLiked
+      ? previousLikes.filter((id) => id !== user._id)
+      : [...previousLikes, user._id];
 
-        const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
-          ? post.dislikes.filter((id) => id !== user._id)
-          : post.dislikes || [];
+    const updatedDislikes = !isLiked && previousDislikes.includes(user._id)
+      ? previousDislikes.filter((id) => id !== user._id)
+      : previousDislikes;
 
-        return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
-      })
-    );
+    updatePostLikes(postId, updatedLikes, updatedDislikes);
 
     try {
       await axios.put(
@@ -517,45 +552,54 @@ function Home() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
     } catch {
-      setPosts(previousPosts);
+      updatePostLikes(postId, previousLikes, previousDislikes);
     }
   };
 
   const handleDislike = async (postId) => {
     const token = localStorage.getItem("token");
-    const previousPosts = [...posts];
-    setPosts(posts.map((post) => {
-      if (post._id !== postId) return post;
-      const isDisliked = post.dislikes?.includes(user._id);
-      const updatedDislikes = isDisliked
-        ? (post.dislikes || []).filter((id) => id !== user._id)
-        : [...(post.dislikes || []), user._id];
+    const post = posts.find(p => p._id === postId);
+    if (!post) return;
 
-      const updatedLikes = !isDisliked && post.likes?.includes(user._id)
-        ? post.likes.filter((id) => id !== user._id)
-        : post.likes || [];
+    const previousLikes = [...(post.likes || [])];
+    const previousDislikes = [...(post.dislikes || [])];
 
-      return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
-    }));
+    const isDisliked = previousDislikes.includes(user._id);
+    const updatedDislikes = isDisliked
+      ? previousDislikes.filter((id) => id !== user._id)
+      : [...previousDislikes, user._id];
+
+    const updatedLikes = !isDisliked && previousLikes.includes(user._id)
+      ? previousLikes.filter((id) => id !== user._id)
+      : previousLikes;
+
+    updatePostLikes(postId, updatedLikes, updatedDislikes);
+
     try {
       await axios.put(`${API}/posts/${postId}/dislike`, {}, { headers: { Authorization: `Bearer ${token}` } });
-    } catch { setPosts(previousPosts); }
+    } catch { 
+      updatePostLikes(postId, previousLikes, previousDislikes);
+    }
   };
 
   const handleRepost = async (postId) => {
     const token = localStorage.getItem("token");
-    const previousPosts = [...posts];
-    setPosts(posts.map((post) => {
-      if (post._id !== postId) return post;
-      const isReposted = post.reposts?.includes(user._id);
-      const updatedReposts = isReposted
-        ? (post.reposts || []).filter((id) => id !== user._id)
-        : [...(post.reposts || []), user._id];
-      return { ...post, reposts: updatedReposts };
-    }));
+    const post = posts.find((p) => p._id === postId);
+    if (!post) return;
+
+    const previousReposts = [...(post.reposts || [])];
+    const isReposted = previousReposts.includes(user._id);
+    const updatedReposts = isReposted
+      ? previousReposts.filter((id) => id !== user._id)
+      : [...previousReposts, user._id];
+
+    updatePostReposts(postId, updatedReposts);
+
     try {
       await axios.put(`${API}/posts/${postId}/repost`, {}, { headers: { Authorization: `Bearer ${token}` } });
-    } catch { setPosts(previousPosts); }
+    } catch { 
+      updatePostReposts(postId, previousReposts); 
+    }
   };
 
   if (!user) return null;
@@ -644,9 +688,8 @@ function Home() {
 
           {/* Posts */}
           {loading ? (
-            <div className="loading-state">
-              <div className="spinner" />
-              <p>Loading posts...</p>
+            <div className="posts-grid">
+              {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
             </div>
           ) : posts.length === 0 ? (
             <div className="empty-state">
@@ -672,6 +715,25 @@ function Home() {
               ))}
             </div>
           )}
+
+          {/* Load more */}
+          {!loading && hasMore && (
+            <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+              <button
+                className="g-primary-btn"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{ minWidth: 140, fontSize: "13px", padding: "9px 20px" }}
+              >
+                {loadingMore ? (
+                  <><span className="spinner" style={{ width: 14, height: 14, marginRight: 6 }} />Loading...</>
+                ) : (
+                  <><i className="fi fi-sr-angle-down" style={{ marginRight: 6 }} />Load more</>
+                )}
+              </button>
+            </div>
+          )}
+
         </div>
 
         {/* ─── RIGHT SIDEBAR ────────────────────────────────── */}

@@ -4,7 +4,10 @@ import { User } from "../models/User.js";
 import { Block } from "../models/Block.js";
 import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
 import { Notification } from "../models/Notification.js";
+import { Profile } from "../models/Profile.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage } from "../middleware/imageValidationMiddleware.js";
 
 const router = express.Router();
 
@@ -21,45 +24,129 @@ async function getBlockedUserIds(userId) {
   );
 }
 
-// ─── GET all posts — block-aware feed ─────────────────────────────────────────
-router.get("/", optionalAuth, async (req, res) => {
+// ─── Helper: attach profile photos to user objects ──────────────────────────
+async function attachPhotosToUserObjects(items, isComment = false) {
+  if (!items || (Array.isArray(items) && items.length === 0)) return items;
+
+  const usersToFetch = new Set();
+  const itemList = Array.isArray(items) ? items : [items];
+
+  itemList.forEach((item) => {
+    if (isComment) {
+      if (item.author?._id) usersToFetch.add(String(item.author._id));
+    } else {
+      if (item.author?._id) usersToFetch.add(String(item.author._id));
+      if (item.comments && item.comments.length > 0) {
+        item.comments.forEach((c) => {
+          if (c.author?._id) usersToFetch.add(String(c.author._id));
+        });
+      }
+    }
+  });
+
+  if (usersToFetch.size === 0) return items;
+
+  const profiles = await Profile.find({ user: { $in: Array.from(usersToFetch) } })
+    .select("user photo")
+    .lean();
+
+  const photoMap = {};
+  profiles.forEach((p) => {
+    photoMap[String(p.user)] = p.photo;
+  });
+
+  itemList.forEach((item) => {
+    if (item.author && photoMap[String(item.author._id)]) {
+      item.author.photo = photoMap[String(item.author._id)];
+    }
+    if (!isComment && item.comments) {
+      item.comments.forEach((c) => {
+        if (c.author && photoMap[String(c.author._id)]) {
+          c.author.photo = photoMap[String(c.author._id)];
+        }
+      });
+    }
+  });
+
+  return items;
+}
+
+// ─── GET all posts — block-aware feed (paginated) ─────────────────────────────
+router.get("/", optionalAuth, async (req, res, next) => {
   try {
-    const { search, category } = req.query;
+    const { search, category, author } = req.query;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip  = (page - 1) * limit;
+
     const filter = {};
     if (category) filter.category = category;
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
+        { title:   { $regex: search, $options: "i" } },
         { content: { $regex: search, $options: "i" } },
-        { tags: { $in: [new RegExp(search, "i")] } },
+        { tags:    { $in: [new RegExp(search, "i")] } },
       ];
     }
-
-    // If logged in, hide posts from blocked users (both directions)
-    if (req.user?.id) {
+    // Handle auth or repost filters
+    if (author && req.query.repostedBy) {
+      // If both present, usually it's an 'OR' scenario for a profile
+      if (filter.$or) {
+        // Intersect logic is complex, just push author/reposted into an $and wrapping
+        filter.$and = [
+          { $or: filter.$or },
+          { $or: [{ author: author }, { reposts: req.query.repostedBy }] }
+        ];
+        delete filter.$or;
+      } else {
+        filter.$or = [{ author: author }, { reposts: req.query.repostedBy }];
+      }
+    } else if (author) {
+      filter.author = author;
+    } else if (req.query.repostedBy) {
+      filter.reposts = req.query.repostedBy;
+    } else if (req.user?.id) {
+      // Only apply block filter for general feed (not author-specific profiles)
       const blockedIds = await getBlockedUserIds(req.user.id);
       if (blockedIds.length > 0) {
         filter.author = { $nin: blockedIds };
       }
     }
 
-    const posts = await Post.find(filter)
-      .populate("author", "username fullName role")
-      .sort({ createdAt: -1 });
+    // Run count and fetch in parallel for speed
+    const [total, posts] = await Promise.all([
+      Post.countDocuments(filter),
+      Post.find(filter)
+        .populate("author", "username fullName role")
+        .populate("comments.author", "username fullName role")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
 
-    res.json(posts);
+    await attachPhotosToUserObjects(posts);
+
+    res.json({
+      posts,
+      page,
+      limit,
+      total,
+      hasMore: skip + posts.length < total,
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
+
 // ─── GET single post ───────────────────────────────────────────────────────────
-router.get("/:id", optionalAuth, async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id).populate(
-      "author",
-      "username fullName role"
-    );
+    const post = await Post.findById(req.params.id)
+      .populate("author", "username fullName role")
+      .populate("comments.author", "username fullName role")
+      .lean();
     if (!post) return res.status(404).json({ message: "Post not found" });
 
     // Block check: neither party should be able to fetch the other's post by ID
@@ -70,14 +157,16 @@ router.get("/:id", optionalAuth, async (req, res) => {
       }
     }
 
+    await attachPhotosToUserObjects(post);
+
     res.json(post);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET post likers ───────────────────────────────────────────────────────────
-router.get("/:id/likes", async (req, res) => {
+router.get("/:id/likes", async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id).populate(
       "likes",
@@ -86,12 +175,12 @@ router.get("/:id/likes", async (req, res) => {
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post.likes);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── CREATE post ──────────────────────────────────────────────────────────────
-router.post("/", requireAuth, requireRole, async (req, res) => {
+router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const { title, content, category, tags, image } = req.body;
     const post = new Post({
@@ -104,14 +193,16 @@ router.post("/", requireAuth, requireRole, async (req, res) => {
     });
     await post.save();
     const populated = await post.populate("author", "username fullName role");
-    res.status(201).json(populated);
+    const leanPost = populated.toObject();
+    await attachPhotosToUserObjects(leanPost);
+    res.status(201).json(leanPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE post ──────────────────────────────────────────────────────────────
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -121,12 +212,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
     await post.deleteOne();
     res.json({ message: "Post deleted" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── LIKE / UNLIKE post — block-aware ────────────────────────────────────────
-router.put("/:id/like", requireAuth, async (req, res) => {
+router.put("/:id/like", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -189,12 +280,12 @@ router.put("/:id/like", requireAuth, async (req, res) => {
 
     res.json({ likes: post.likes.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DISLIKE / UNDISLIKE post — block-aware ───────────────────────────────────
-router.put("/:id/dislike", requireAuth, async (req, res) => {
+router.put("/:id/dislike", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -227,12 +318,12 @@ router.put("/:id/dislike", requireAuth, async (req, res) => {
     await post.save();
     res.json({ dislikes: post.dislikes.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── REPOST — block-aware ────────────────────────────────────────────────────
-router.put("/:id/repost", requireAuth, async (req, res) => {
+router.put("/:id/repost", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -248,12 +339,12 @@ router.put("/:id/repost", requireAuth, async (req, res) => {
     await post.save();
     res.json({ reposts: post.reposts.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── ADD comment — block-aware ────────────────────────────────────────────────
-router.post("/:id/comments", requireAuth, async (req, res) => {
+router.post("/:id/comments", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -271,28 +362,30 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     post.comments.push(comment);
     await post.save();
     await post.populate("comments.author", "username fullName role");
-    res.json(post.comments[post.comments.length - 1]);
+    const newComment = post.comments[post.comments.length - 1].toObject();
+    await attachPhotosToUserObjects(newComment, true);
+    res.json(newComment);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── GET comments ─────────────────────────────────────────────────────────────
-router.get("/:id/comments", async (req, res) => {
+router.get("/:id/comments", async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id).populate(
-      "comments.author",
-      "username fullName role"
-    );
+    const post = await Post.findById(req.params.id)
+      .populate("comments.author", "username fullName role")
+      .lean();
     if (!post) return res.status(404).json({ message: "Post not found" });
+    await attachPhotosToUserObjects(post.comments, true);
     res.json(post.comments);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── DELETE comment ───────────────────────────────────────────────────────────
-router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
+router.delete("/:id/comments/:commentId", requireAuth, async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -311,12 +404,12 @@ router.delete("/:id/comments/:commentId", requireAuth, async (req, res) => {
     
     res.json({ message: "Comment deleted", commentId: req.params.commentId });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ─── EDIT post ────────────────────────────────────────────────────────────────
-router.put("/:id", requireAuth, async (req, res) => {
+router.put("/:id", requireAuth, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -331,9 +424,11 @@ router.put("/:id", requireAuth, async (req, res) => {
     post.image = image ?? post.image;
     await post.save();
     const populated = await post.populate("author", "username fullName role");
-    res.json(populated);
+    const leanPost = populated.toObject();
+    await attachPhotosToUserObjects(leanPost);
+    res.json(leanPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

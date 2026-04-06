@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { useAuthStore } from "./useAuthStore";
 import axios from "axios";
-
-const BASE_URL = "http://localhost:5000";
+import API from "../utils/api";
 
 export const useNotificationStore = create((set, get) => ({
   notifications: [],
@@ -17,7 +16,7 @@ export const useNotificationStore = create((set, get) => ({
       const token = localStorage.getItem("token");
       if (!token) return set({ loading: false });
       
-      const res = await axios.get(`${BASE_URL}/notifications?page=${page}&limit=20`, {
+      const res = await axios.get(`${API}/notifications?page=${page}&limit=20`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -39,7 +38,7 @@ export const useNotificationStore = create((set, get) => ({
       const token = localStorage.getItem("token");
       if (!token) return;
       
-      await axios.put(`${BASE_URL}/notifications/mark-read`, {}, {
+      await axios.put(`${API}/notifications/mark-read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

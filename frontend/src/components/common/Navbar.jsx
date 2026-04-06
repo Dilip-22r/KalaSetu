@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useNotificationStore } from "../../store/useNotificationStore";
 import axios from "axios";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./Navbar.css";
+import API from "../../utils/api";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ function Navbar() {
 
   useEffect(() => {
     if (!effectiveUser?._id) return;
-    axios.get(`http://localhost:5000/profiles/${effectiveUser._id}`)
+    axios.get(`${API}/profiles/${effectiveUser._id}`)
       .then(res => {
         if (res.data?.photo) setProfilePhoto(res.data.photo);
       })
@@ -106,7 +108,7 @@ function Navbar() {
     setPendingFollowActions((prev) => ({ ...prev, [notifId]: action + "_loading" }));
     try {
       await axios.put(
-        `http://localhost:5000/profiles/${senderId}/${action}-follow`,
+        `${API}/profiles/${senderId}/${action}-follow`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -169,7 +171,7 @@ function Navbar() {
           </div>
         </div>
 
-        <div className="g-nav-shell">
+        <div className="g-nav-shell desktop-only">
           <div className="g-nav-main">
             <button
               className={`g-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
@@ -208,9 +210,29 @@ function Navbar() {
             )}
             <div className="g-notif-wrapper" ref={dropdownRef}>
               <button className="g-alert-btn" onClick={handleBellClick}>
-                <i className="fi fi-sr-bell" />
+                <motion.div
+                  animate={unreadCount > 0 ? {
+                    rotate: [0, -15, 12, -15, 12, 0],
+                  } : { rotate: 0 }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: unreadCount > 0 ? Infinity : 0,
+                    repeatDelay: 3
+                  }}
+                >
+                  <i className="fi fi-sr-bell" />
+                </motion.div>
                 <span>Alerts</span>
-                {unreadCount > 0 && <span className="g-badge">{unreadCount}</span>}
+                {unreadCount > 0 && (
+                  <motion.span 
+                    className="g-badge"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                  >
+                    {unreadCount}
+                  </motion.span>
+                )}
               </button>
               {showNotifications && (
                 <div className="g-notif-dropdown">
@@ -368,6 +390,56 @@ function Navbar() {
         </div>
       )}
 
+      {/* Mobile Bottom Navigation — Only visible on mobile via CSS */}
+      <div className="g-mobile-nav mobile-only">
+        <button
+          className={`g-m-nav-item ${isActivePath("/home") ? "is-active" : ""}`}
+          onClick={() => navigate("/home")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-home" />
+          </motion.div>
+          <span>Home</span>
+        </button>
+
+        <button
+          className={`g-m-nav-item ${isActivePath("/search") ? "is-active" : ""}`}
+          onClick={() => navigate("/search")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-search" />
+          </motion.div>
+          <span>Explore</span>
+        </button>
+
+        {effectiveUser.role !== "user" && (
+          <button
+            className={`g-m-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
+            onClick={() => navigate("/messages")}
+          >
+            <motion.div whileTap={{ scale: 0.9 }}>
+              <i className="fi fi-sr-comments" />
+            </motion.div>
+            <span>Messages</span>
+          </button>
+        )}
+
+        <button
+          className={`g-m-nav-item ${isActivePath("/profile") ? "is-active" : ""}`}
+          onClick={() => navigate(`/profile/${effectiveUser._id}`)}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt="Me" className="g-m-profile-img" />
+            ) : (
+              <div className="g-m-profile-placeholder">
+                {effectiveUser.username?.[0]?.toUpperCase()}
+              </div>
+            )}
+          </motion.div>
+          <span>Profile</span>
+        </button>
+      </div>
     </>
   );
 }

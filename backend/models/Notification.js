@@ -15,4 +15,7 @@ const notificationSchema = new mongoose.Schema(
 // Indexes for faster querying of user notifications sorted by creation date
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 
+// Compound index for unread count query: countDocuments({ recipient, read: false })
+notificationSchema.index({ recipient: 1, read: 1 });
+
 export const Notification = mongoose.model("Notification", notificationSchema);

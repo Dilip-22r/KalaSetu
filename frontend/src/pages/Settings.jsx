@@ -4,7 +4,7 @@ import axios from "axios";
 import Navbar from "../components/common/Navbar";
 import "./Settings.css";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 function Settings() {
   const navigate = useNavigate();

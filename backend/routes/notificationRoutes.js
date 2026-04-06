@@ -6,7 +6,7 @@ import { requireAuth } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // GET notifications with pagination
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, parseInt(req.query.limit) || 20);
@@ -35,12 +35,12 @@ router.get("/", requireAuth, async (req, res) => {
       hasMore: page * limit < total,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // MARK ALL AS READ
-router.put("/mark-read", requireAuth, async (req, res) => {
+router.put("/mark-read", requireAuth, async (req, res, next) => {
   try {
     await Notification.updateMany(
       { recipient: req.user.id, read: false },
@@ -48,7 +48,7 @@ router.put("/mark-read", requireAuth, async (req, res) => {
     );
     res.json({ message: "Notifications marked as read" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

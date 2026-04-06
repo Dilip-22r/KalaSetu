@@ -10,7 +10,14 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: [process.env.ALLOWED_ORIGIN || "http://localhost:5173"] },
+  cors: {
+    origin: [
+      /localhost:\d+$/,
+      /\.vercel\.app$/,
+      process.env.ALLOWED_ORIGIN || false
+    ].filter(Boolean),
+    credentials: true,
+  },
 });
 
 export function getReceiverSocketId(userId) {

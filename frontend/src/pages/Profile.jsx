@@ -5,6 +5,7 @@ import Navbar from "../components/common/Navbar";
 import "./Profile.css";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
+import { ProfileHeaderSkeleton, PostSkeleton } from "../components/common/Skeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
 import API from "../utils/api";
@@ -325,8 +326,8 @@ function Profile() {
 
       const [profileResult, postsResult, followResult] = await Promise.allSettled([
         axios.get(`${API}/profiles/${userId}`),
-        // Only fetch THIS user's posts — avoid loading the whole feed
-        axios.get(`${API}/posts`, { params: { author: userId, limit: 50 } }),
+        // Fetch both authored posts AND reposts so both tabs populate correctly
+        axios.get(`${API}/posts`, { params: { author: userId, repostedBy: userId, limit: 50 } }),
         token && currentUser
           ? axios.get(`${API}/profiles/${userId}/follow-status`, { headers: authHeader })
           : Promise.resolve(null),
@@ -363,9 +364,11 @@ function Profile() {
     return (
       <div className="prof-bg">
         <Navbar />
-        <div className="prof-loading">
-          <div className="prof-spinner" />
-          <p>Loading profile...</p>
+        <div className="prof-container" style={{ marginTop: "24px" }}>
+          <ProfileHeaderSkeleton />
+          <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto" }}>
+            {[...Array(2)].map((_, i) => <PostSkeleton key={i} />)}
+          </div>
         </div>
       </div>
     );

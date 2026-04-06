@@ -18,15 +18,33 @@ import { app, server } from "./lib/socket.js";
 
 dotenv.config();
 
+// trust proxy is REQUIRED for rate limiters behind Render/Heroku load balancers
+app.set("trust proxy", 1);
+
 // ─── 0. Gzip compression (must be before routes — compresses all responses) ────
 app.use(compression({ threshold: 1024 })); // compress responses > 1KB
 
 // ─── 1. Security headers (must be first) ─────────────────────────────────────
 app.use(helmet());
 
-// ─── 2. CORS (allow only configured frontend origin) ─────────────────────────
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
-app.use(cors({ origin: [allowedOrigin], credentials: true }));
+// ─── 2. CORS (allow frontend origins dynamically) ─────────────────────────
+app.use(cors({ 
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (
+      origin.startsWith("http://localhost:") || 
+      origin.endsWith(".vercel.app") || 
+      origin === process.env.ALLOWED_ORIGIN
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  }, 
+  credentials: true 
+}));
 
 // ─── 3. Body parsing (12MB limit — safe for base64 images up to 5MB) ─────────
 app.use(express.json({ limit: "12mb" }));

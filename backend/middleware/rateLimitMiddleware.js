@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 
 // ─── Shared on-limit logger ───────────────────────────────────────────────────
 function onLimitReached(req, _res, _options) {
@@ -15,9 +15,8 @@ export const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: { ip: false },   // suppress IPv6 key-gen warning; we handle IPs manually
   keyGenerator: (req) => {
-    const ip = req.ip || "unknown";
+    const ip = ipKeyGenerator(req.ip);
     const email = (req.body?.email || "").toLowerCase().trim();
     return `${ip}-${email}`;
   },

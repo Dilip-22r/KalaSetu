@@ -12,6 +12,12 @@
   padding: 30px 40px 72px;
 }
 
+@media (max-width: 768px) {
+  .prof-container {
+    padding: 16px 12px 80px;
+  }
+}
+
 .prof-hero,
 .prof-card,
 .prof-no-posts,
@@ -93,6 +99,17 @@
   z-index: 2;
 }
 
+@media (max-width: 768px) {
+  .prof-hero-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 0 20px 24px;
+    margin-top: -44px;
+    gap: 16px;
+  }
+}
+
 .prof-avatar-wrap {
   flex-shrink: 0;
 }
@@ -137,6 +154,19 @@
   font-size: 34px;
   line-height: 1.05;
   color: var(--text-strong);
+}
+
+@media (max-width: 768px) {
+  .prof-name-row {
+    justify-content: center;
+  }
+  .prof-name-row h2 {
+    font-size: 26px;
+  }
+  .prof-hero-main {
+    padding-top: 12px;
+    width: 100%;
+  }
 }
 
 .prof-role-badge {
@@ -219,6 +249,12 @@
   font-weight: 700;
 }
 
+@media (max-width: 768px) {
+  .prof-meta-row, .prof-skill-tags {
+    justify-content: center;
+  }
+}
+
 .prof-stats-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -267,6 +303,19 @@
   justify-content: flex-end;
   gap: 12px;
   padding-top: 54px;
+}
+
+@media (max-width: 768px) {
+  .prof-hero-actions {
+    padding-top: 0;
+    justify-content: center;
+    width: 100%;
+  }
+  .prof-hero-actions button {
+    flex: 1;
+    justify-content: center;
+    min-width: 140px;
+  }
 }
 
 .prof-primary-btn,
@@ -348,6 +397,20 @@
   grid-template-columns: minmax(0, 1fr) 310px;
   gap: 30px;
   align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .prof-body {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .prof-sidebar {
+    order: 2;
+    position: static;
+  }
+  .prof-posts-section {
+    order: 1;
+  }
 }
 
 .prof-sidebar {
@@ -447,6 +510,19 @@
   max-width: 600px;
 }
 
+@media (max-width: 768px) {
+  .prof-tabs {
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .prof-tab {
+    padding: 14px 10px;
+    font-size: 11px;
+    flex: 1;
+  }
+}
+
 .prof-tab {
   position: relative;
   display: flex;
@@ -538,6 +614,18 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+@media (max-width: 860px) {
+  .prof-posts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .prof-posts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .prof-post-card {

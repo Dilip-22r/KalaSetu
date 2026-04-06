@@ -57,10 +57,21 @@
 @media (max-width: 768px) {
   .home-container {
     grid-template-columns: 1fr;
+    padding: 12px 0 80px; /* Space for bottom nav */
+    gap: 16px;
   }
 
-  .home-sidebar {
+  .home-sidebar,
+  .home-right-sidebar {
     display: none !important;
+  }
+
+  /* Ensure the feed and create post are centered and full width */
+  .home-feed, 
+  .create-post {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 var(--mobile-pad);
   }
 }
 

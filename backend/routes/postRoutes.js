@@ -88,9 +88,23 @@ router.get("/", optionalAuth, async (req, res, next) => {
         { tags:    { $in: [new RegExp(search, "i")] } },
       ];
     }
-    // If fetching a specific author's posts, use the { author, createdAt } index directly
-    if (author) {
+    // Handle auth or repost filters
+    if (author && req.query.repostedBy) {
+      // If both present, usually it's an 'OR' scenario for a profile
+      if (filter.$or) {
+        // Intersect logic is complex, just push author/reposted into an $and wrapping
+        filter.$and = [
+          { $or: filter.$or },
+          { $or: [{ author: author }, { reposts: req.query.repostedBy }] }
+        ];
+        delete filter.$or;
+      } else {
+        filter.$or = [{ author: author }, { reposts: req.query.repostedBy }];
+      }
+    } else if (author) {
       filter.author = author;
+    } else if (req.query.repostedBy) {
+      filter.reposts = req.query.repostedBy;
     } else if (req.user?.id) {
       // Only apply block filter for general feed (not author-specific profiles)
       const blockedIds = await getBlockedUserIds(req.user.id);

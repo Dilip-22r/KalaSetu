@@ -4,7 +4,7 @@ import axios from "axios";
 import "./CreatePost.css";
 import Navbar from "../components/common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 const categoryOptions = [
   { value: "story", label: "Story" },

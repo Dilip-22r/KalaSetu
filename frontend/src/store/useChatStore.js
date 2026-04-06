@@ -6,30 +6,31 @@ export const useChatStore = create((set, get) => ({
   selectedUserId: null,
   setSelectedUserId: (id) => set({ selectedUserId: id }),
   setMessages: (newMessages) => set({ messages: newMessages }),
+  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 
   updateMessageStatus: (messageId, status) => {
-    set({
-      messages: get().messages.map((m) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
         m._id === messageId ? { ...m, status } : m
       ),
-    });
+    }));
   },
 
   markAllSeen: (partnerId) => {
-    set({
-      messages: get().messages.map((m) => {
+    set((state) => ({
+      messages: state.messages.map((m) => {
         const senderId = String(m.sender?._id ?? m.sender ?? "");
         return senderId !== String(partnerId) ? { ...m, status: "seen" } : m;
       }),
-    });
+    }));
   },
 
   markMessageDeleted: (messageId) => {
-    set({
-      messages: get().messages.map((m) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
         m._id === messageId ? { ...m, text: "This message was deleted", deleted: true } : m
       ),
-    });
+    }));
   },
 
   subscribeToMessages: () => {
@@ -37,9 +38,9 @@ export const useChatStore = create((set, get) => ({
     if (!socket) return;
 
     socket.on("newMessage", (newMessage) => {
-      const { selectedUserId } = get();
+      const { selectedUserId, addMessage } = get();
       if (!selectedUserId || newMessage.sender._id !== selectedUserId) return;
-      set({ messages: [...get().messages, newMessage] });
+      addMessage(newMessage);
       const { socket: currentSocket } = useAuthStore.getState();
       const currentUser = JSON.parse(localStorage.getItem("user") || "null");
       if (currentSocket?.connected && currentUser?._id) {

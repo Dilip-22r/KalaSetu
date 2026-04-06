@@ -366,3 +366,127 @@
     font-size: 32px;
   }
 }
+
+/* Danger Zone */
+.danger-zone {
+  margin-top: 24px;
+  border: 1px solid rgba(200, 97, 76, 0.24);
+  background: rgba(200, 97, 76, 0.04);
+}
+
+.danger-title {
+  color: #b8523a;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.danger-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.danger-btn {
+  padding: 13px 20px;
+  border-radius: var(--radius-pill);
+  background: #c8614c;
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.danger-btn:hover {
+  background: #b8523a;
+}
+
+/* Delete Modal */
+.ep-delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 33, 37, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.ep-delete-modal {
+  width: min(400px, calc(100vw - 32px));
+  background: var(--surface-card);
+  padding: 32px;
+  border-radius: 28px;
+  border: 1px solid rgba(200, 97, 76, 0.24);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+}
+
+.ep-delete-modal h3 {
+  color: #b8523a;
+  margin-bottom: 12px;
+  font-size: 22px;
+}
+
+.ep-delete-modal p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.ep-delete-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ep-delete-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.ep-delete-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(47, 111, 109, 0.14);
+  background: rgba(247, 243, 237, 0.82);
+  outline: none;
+  font-size: 14px;
+}
+
+.ep-delete-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ep-delete-cancel {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(47, 111, 109, 0.14);
+  background: transparent;
+  color: var(--brand-900);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ep-delete-confirm {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: #c8614c;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ep-delete-confirm:disabled {
+  background: #e0bbb3;
+  cursor: not-allowed;
+}

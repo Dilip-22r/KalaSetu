@@ -5,11 +5,13 @@ import { requireAuth } from "../middleware/authMiddleware.js";
 import { Notification } from "../models/Notification.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 import jwt from "jsonwebtoken";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage, validatePdf } from "../middleware/imageValidationMiddleware.js";
 
 const router = express.Router();
 
 // GET all artisans & NGOs (for search)
-router.get("/creators", async (req, res) => {
+router.get("/creators", async (req, res, next) => {
   try {
     const { search, type } = req.query;
     const userFilter = { role: { $in: ["artisan", "ngo"] } };
@@ -30,12 +32,12 @@ router.get("/creators", async (req, res) => {
     const profiles = await Profile.find(profileFilter).populate("user", "username fullName role email").lean();
     res.json(profiles);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // FOLLOW / UNFOLLOW user
-router.put("/:userId/follow", requireAuth, async (req, res) => {
+router.put("/:userId/follow", requireAuth, async (req, res, next) => {
   try {
     if (req.params.userId === req.user.id)
       return res.status(400).json({ message: "Cannot follow yourself" });
@@ -102,12 +104,12 @@ router.put("/:userId/follow", requireAuth, async (req, res) => {
 
     res.json({ status: "followed", following: true, followersCount: target.followers.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // ACCEPT follow request
-router.put("/:userId/accept-follow", requireAuth, async (req, res) => {
+router.put("/:userId/accept-follow", requireAuth, async (req, res, next) => {
   try {
     const requesterId = req.params.userId;
     const me = await User.findById(req.user.id);
@@ -128,18 +130,27 @@ router.put("/:userId/accept-follow", requireAuth, async (req, res) => {
         type: "follow_accept",
       });
       await newNotif.save();
+
       const populated = await newNotif.populate("sender", "username fullName");
       const receiverSocketId = getReceiverSocketId(requester._id.toString());
       if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populated);
     }
+    
+    // Update the original request notification so the owner sees "You accepted"
+    // (Run this outside the block to catch old legacy notifications that got stuck)
+    await Notification.updateMany(
+      { recipient: me._id, sender: requester._id, type: "follow_request" },
+      { type: "follow_accepted_by_me" }
+    );
+      
     res.json({ message: "Follow request accepted", followersCount: me.followers.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // REJECT follow request
-router.put("/:userId/reject-follow", requireAuth, async (req, res) => {
+router.put("/:userId/reject-follow", requireAuth, async (req, res, next) => {
   try {
     const requesterId = req.params.userId;
     const me = await User.findById(req.user.id);
@@ -150,14 +161,22 @@ router.put("/:userId/reject-follow", requireAuth, async (req, res) => {
       me.followRequests.pull(requesterId);
       await me.save();
     }
+    
+    // Update the original request notification so the owner sees it was rejected
+    // (Run outside block to clean up stuck legacy notifications)
+    await Notification.updateMany(
+      { recipient: me._id, sender: requester._id, type: "follow_request" },
+      { type: "follow_rejected_by_me" }
+    );
+    
     res.json({ message: "Follow request rejected" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET followers list for a user (access-controlled)
-router.get("/:userId/followers", async (req, res) => {
+router.get("/:userId/followers", async (req, res, next) => {
   try {
     const targetUser = await User.findById(req.params.userId);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
@@ -204,12 +223,12 @@ router.get("/:userId/followers", async (req, res) => {
 
     res.json({ followers, total: followers.length });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET follow status
-router.get("/:userId/follow-status", requireAuth, async (req, res) => {
+router.get("/:userId/follow-status", requireAuth, async (req, res, next) => {
   try {
     const me = await User.findById(req.user.id);
     const isFollowing = me.following.includes(req.params.userId);
@@ -217,12 +236,12 @@ router.get("/:userId/follow-status", requireAuth, async (req, res) => {
     const hasRequested = target?.followRequests?.includes(me._id) || false;
     res.json({ following: isFollowing, requested: hasRequested, followersCount: target?.followers?.length || 0 });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // GET profile by userId
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.params.userId }).populate(
       "user",
@@ -231,14 +250,14 @@ router.get("/:userId", async (req, res) => {
     if (!profile) return res.status(404).json({ message: "Profile not found" });
     res.json(profile);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 
 // CREATE or UPDATE profile
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, uploadLimiter, validateImage("photo"), validatePdf("verificationDocument"), async (req, res, next) => {
   try {
-    const { displayName, age, gender, skills, location, about, photo, userType, organizationName, verificationDocument, organizationId, isPrivate } = req.body;
+    const { displayName, age, gender, skills, location, about, photo, userType, organizationName, verificationDocument, organizationId, isPrivate, notificationRetentionDays } = req.body;
     let profile = await Profile.findOne({ user: req.user.id });
 
     // Only update fields that were explicitly sent (allows partial updates like photo removal)
@@ -255,6 +274,7 @@ router.post("/", requireAuth, async (req, res) => {
     if (verificationDocument !== undefined) updates.verificationDocument = verificationDocument;
     if (organizationId !== undefined) updates.organizationId = organizationId;
     if (isPrivate !== undefined) updates.isPrivate = isPrivate;
+    if (notificationRetentionDays !== undefined) updates.notificationRetentionDays = notificationRetentionDays;
 
     if (profile) {
       Object.assign(profile, updates);
@@ -267,7 +287,7 @@ router.post("/", requireAuth, async (req, res) => {
     }
     res.json(profile);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 });
 

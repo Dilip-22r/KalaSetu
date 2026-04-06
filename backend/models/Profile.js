@@ -20,6 +20,7 @@ const profileSchema = new mongoose.Schema(
     verificationDocument: { type: String },
     organizationId: { type: String },
     isPrivate: { type: Boolean, default: false },
+    notificationRetentionDays: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

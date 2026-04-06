@@ -8,7 +8,7 @@ import getCroppedImg from "../utils/cropImage";
 import "./EditProfile.css";
 import Navbar from "../components/common/Navbar";
 
-const API = "http://localhost:5000";
+import API from "../utils/api";
 
 function EditProfile() {
   const navigate = useNavigate();
@@ -25,6 +25,8 @@ function EditProfile() {
   const [zoom, setZoom] = useState(1);
   const [croppedPx, setCroppedPx] = useState(null);
 
+  // Settings state moved to SettingsModal
+
   const {
     register,
     handleSubmit,
@@ -33,7 +35,8 @@ function EditProfile() {
     formState: { errors },
   } = useForm();
 
-  const selectedRole = watch("userType");
+  // Derive role from registration — not editable
+  const selectedRole = currentUser.role === "ngo" ? "NGO" : "Artisan";
 
   useEffect(() => {
     if (!currentUser || currentUser.role === "user") {
@@ -51,11 +54,10 @@ function EditProfile() {
         setValue("skills", profile.skills || "");
         setValue("location", profile.location || "");
         setValue("about", profile.about || "");
-        setValue("userType", profile.userType || (currentUser.role === "artisan" ? "Artisan" : "NGO"));
         setValue("organizationName", profile.organizationName || "");
         setValue("organizationId", profile.organizationId || "");
         setValue("verificationDocument", profile.verificationDocument || "");
-        setValue("isPrivate", profile.isPrivate || false);
+        setValue("isPrivate", profile.isPrivate ? "true" : "false");
         if (profile.photo) setPreviewPhoto(profile.photo);
       } catch {
         // No profile yet, fall back to defaults.
@@ -145,11 +147,10 @@ function EditProfile() {
           location: data.location,
           about: data.about,
           photo: previewPhoto,
-          userType: data.userType,
           organizationName: data.organizationName,
           organizationId: data.organizationId,
           verificationDocument: data.verificationDocument,
-          isPrivate: data.isPrivate,
+          isPrivate: data.isPrivate === "true" || data.isPrivate === true,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -161,6 +162,7 @@ function EditProfile() {
     setLoading(false);
   };
 
+  // Delete account function moved to SettingsModal
   if (fetching) {
     return (
       <div className="theme-bg">
@@ -298,13 +300,15 @@ function EditProfile() {
 
             <div className="ep-row">
               <div className="ep-field">
-                <label>User Type *</label>
-                <select {...register("userType", { required: "Please select a type" })}>
-                  <option value="">Select type</option>
-                  <option>Artisan</option>
-                  <option>NGO</option>
-                </select>
-                {errors.userType && <small>{errors.userType.message}</small>}
+                <label>Role</label>
+                <input
+                  type="text"
+                  value={currentUser.role === "artisan" ? "Artisan" : currentUser.role === "ngo" ? "NGO" : "User"}
+                  readOnly
+                  disabled
+                  style={{ opacity: 0.7, cursor: "not-allowed", background: "#f5f5f5" }}
+                  title="Role cannot be changed after registration"
+                />
               </div>
 
               <div className="ep-field">
@@ -320,11 +324,12 @@ function EditProfile() {
               {errors.about && <small>{errors.about.message}</small>}
             </div>
 
-            <div className="ep-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "10px", marginTop: "8px" }}>
-              <input type="checkbox" id="privateProfile" style={{ width: "22px", height: "22px" }} {...register("isPrivate")} />
-              <label htmlFor="privateProfile" style={{ cursor: "pointer", fontSize: "14px" }}>
-                Make profile private (only visible to followers)
-              </label>
+            <div className="ep-field">
+              <label>Profile Privacy</label>
+              <select {...register("isPrivate")} style={{ padding: "10px", borderRadius: "8px", border: "1px solid #ddd", fontSize: "14px", outline: "none" }}>
+                <option value="false">Public — visible to everyone</option>
+                <option value="true">Private — only visible to followers</option>
+              </select>
             </div>
 
             <button type="submit" className="ep-submit" disabled={loading}>
@@ -332,6 +337,8 @@ function EditProfile() {
             </button>
           </form>
         </div>
+
+        {/* Settings have been moved to Navbar Settings dropdown */}
       </div>
 
       {rawImage && (
@@ -373,6 +380,8 @@ function EditProfile() {
           </div>
         </div>
       )}
+
+      {/* Delete modal moved to SettingsModal */}
     </div>
   );
 }

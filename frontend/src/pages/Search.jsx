@@ -6,7 +6,8 @@ import Navbar from "../components/common/Navbar";
 import { useAuthStore } from "../store/useAuthStore";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
-const API = "http://localhost:5000";
+import { PostSkeleton, ProfileCardSkeleton } from "../components/common/Skeleton";
+import API from "../utils/api";
 
 function Search() {
   const navigate = useNavigate();
@@ -50,11 +51,11 @@ function Search() {
         const updatedLikes = isLiked
           ? post.likes.filter((id) => id !== user._id)
           : [...post.likes, user._id];
-          
+
         const updatedDislikes = !isLiked && post.dislikes?.includes(user._id)
           ? post.dislikes.filter((id) => id !== user._id)
           : post.dislikes || [];
-          
+
         return { ...post, likes: updatedLikes, dislikes: updatedDislikes };
       })
     );
@@ -80,11 +81,11 @@ function Search() {
       const updatedDislikes = isDisliked
         ? (post.dislikes || []).filter((id) => id !== user._id)
         : [...(post.dislikes || []), user._id];
-        
+
       const updatedLikes = !isDisliked && post.likes?.includes(user._id)
         ? post.likes.filter((id) => id !== user._id)
         : post.likes || [];
-        
+
       return { ...post, dislikes: updatedDislikes, likes: updatedLikes };
     }));
     try {
@@ -131,7 +132,7 @@ function Search() {
       if (search) params.search = search;
       if (typeFilter) params.category = typeFilter;
       const res = await axios.get(`${API}/posts`, { params });
-      setPosts(res.data);
+      setPosts(res.data.posts || []);
     } catch {
       setPosts([]);
     }
@@ -207,8 +208,10 @@ function Search() {
         </div>
 
         {loading ? (
-          <div className="s-loading">
-            <div className="s-spinner"></div>
+          <div className={tab === "creators" ? "s-grid" : "explore-feed"}>
+            {[...Array(6)].map((_, i) => (
+              tab === "creators" ? <ProfileCardSkeleton key={i} /> : <div className="posts-grid" key={i}><PostSkeleton /></div>
+            ))}
           </div>
         ) : tab === "creators" ? (
           results.length === 0 ? (
@@ -244,7 +247,7 @@ function Search() {
             <p>No posts found</p>
           </div>
         ) : (
-          <div className="explore-feed" style={{ maxWidth: "550px", margin: "0 auto", padding: "20px 0" }}>
+          <div className="explore-feed">
             <div className="posts-grid">
               {posts.map((post) => (
                 <PostCard
@@ -255,6 +258,7 @@ function Search() {
                   onDislike={handleDislike}
                   onRepost={handleRepost}
                   onShowLikes={handleLikesClick}
+                  useModalForComments={true}
                 />
               ))}
             </div>

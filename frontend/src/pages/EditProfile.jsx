@@ -140,7 +140,7 @@ function EditProfile() {
       await axios.post(
         `${API}/profiles`,
         {
-          displayName: data.name,
+          displayName: selectedRole === "NGO" ? data.organizationName : data.name,
           age: data.age,
           gender: data.gender,
           skills: data.skills,
@@ -241,7 +241,7 @@ function EditProfile() {
                       const file = e.target.files[0];
                       if (file) {
                         const reader = new FileReader();
-                        reader.onload = () => setValue("verificationDocument", reader.result);
+                        reader.onload = () => setValue("verificationDocument", reader.result, { shouldValidate: true, shouldDirty: true });
                         reader.readAsDataURL(file);
                       }
                     }}

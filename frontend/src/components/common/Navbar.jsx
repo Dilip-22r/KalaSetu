@@ -252,7 +252,7 @@ function Navbar() {
                             if (notification.type === "message") {
                               navigate(`/messages/${notification.sender?._id}`);
                               setShowNotifications(false);
-                            } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
+                            } else if (["follow", "follow_accept", "follow_reject", "follow_request"].includes(notification.type)) {
                               navigate(`/profile/${notification.sender?._id}`);
                               setShowNotifications(false);
                             }
@@ -283,6 +283,7 @@ function Navbar() {
                                     {notification.type === "message" && "sent you a message"}
                                     {notification.type === "follow" && "started following you"}
                                     {notification.type === "follow_accept" && "accepted your follow request"}
+                                    {notification.type === "follow_reject" && "declined your follow request"}
                                     {notification.type === "follow_request" && "requested to follow you"}
                                   </>
                                 );

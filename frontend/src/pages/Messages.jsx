@@ -480,7 +480,7 @@ function Messages() {
                 <button className="msg-back-btn mobile-only" onClick={() => setMobileView("list")}>
                   <i className="fi fi-sr-arrow-left" />
                 </button>
-                <div className="msg-chat-avatar-wrap">
+                <div className="msg-chat-avatar-wrap" onClick={() => navigate(`/profile/${activeUserId}`)} style={{cursor: 'pointer'}}>
                   <div className="msg-chat-avatar">
                     {activeUser?.photo ? (
                       <img src={activeUser.photo} alt="" className="msg-chat-avatar-img" />

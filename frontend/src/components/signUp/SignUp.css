@@ -43,6 +43,9 @@
 }
 
 .su-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 26px;
   font-weight: 900;
   font-family: "Playfair Display", serif;

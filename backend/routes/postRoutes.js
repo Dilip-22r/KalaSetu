@@ -179,6 +179,20 @@ router.get("/:id/likes", async (req, res, next) => {
   }
 });
 
+// ─── GET post dislikers ────────────────────────────────────────────────────────
+router.get("/:id/dislikes", async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id).populate(
+      "dislikes",
+      "username fullName"
+    );
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.dislikes || []);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── CREATE post ──────────────────────────────────────────────────────────────
 router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), async (req, res, next) => {
   try {

@@ -27,7 +27,7 @@ const categoryIcons = {
   announcement: "fi fi-sr-megaphone",
 };
 
-export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes, onEdit, onDelete, isOwn, hideRepost, useModalForComments }) {
+export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onShowLikes, onShowDislikes, onEdit, onDelete, isOwn, hideRepost, useModalForComments }) {
   const navigate = useNavigate();
   const liked = post.likes?.includes(currentUser?._id);
   const disliked = post.dislikes?.includes(currentUser?._id);
@@ -41,6 +41,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
   const [showShareModal, setShowShareModal] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showFullPost, setShowFullPost] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [shareUsers, setShareUsers] = useState([]);
   const [shareSearch, setShareSearch] = useState("");
   const [sentTo, setSentTo] = useState([]);
@@ -131,6 +132,18 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
     return name.includes(shareSearch.toLowerCase()) && p.user?._id !== currentUser?._id;
   });
 
+  // Fetch comments when opening modal on Explore/Profile pages
+  useEffect(() => {
+    if (showFullPost && useModalForComments && comments.length === 0) {
+      setLoadingComments(true);
+      axios
+        .get(`${API}/posts/${post._id}/comments`)
+        .then((res) => setComments(res.data))
+        .catch(() => setComments([]))
+        .finally(() => setLoadingComments(false));
+    }
+  }, [showFullPost, useModalForComments, post._id, comments.length]);
+
   return (
     <div className="post-card">
       {/* Header — Always at the top */}
@@ -169,7 +182,31 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
 
       <div className="post-body">
         <h3 className="post-title">{post.title}</h3>
-        <p className="post-content">{post.content}</p>
+        <p className="post-content">
+          {(!isExpanded && post.content?.length > (useModalForComments ? 80 : 150)) ? (
+            <>
+              {post.content.slice(0, (useModalForComments ? 80 : 150))}...{" "}
+              <span className="read-more-btn" onClick={(e) => {
+                e.stopPropagation();
+                if (useModalForComments) {
+                  setShowFullPost(true);
+                } else {
+                  setIsExpanded(true);
+                }
+              }}>Read more</span>
+            </>
+          ) : (
+            <>
+              {post.content}
+              {isExpanded && (
+                <span className="read-more-btn" onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(false);
+                }}> Show less</span>
+              )}
+            </>
+          )}
+        </p>
 
         {post.tags?.length > 0 && (
           <div className="post-tags">
@@ -198,7 +235,11 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
           {/* Dislike */}
           <button className={`post-action-btn dislike ${disliked ? "active" : ""}`} onClick={() => onDislike(post._id)} disabled={!currentUser} title="Dislike">
             <i className="fi fi-sr-thumbs-down" />
-            {post.dislikes?.length > 0 && <span className="action-count">{post.dislikes.length}</span>}
+            {(post.dislikes?.length > 0) && (
+              <span className="action-count" onClick={(e) => { e.stopPropagation(); onShowDislikes(post._id, post.dislikes.length); }}>
+                {post.dislikes.length}
+              </span>
+            )}
           </button>
 
           {/* Comment */}
@@ -472,6 +513,7 @@ function Home() {
   const [search, setSearch] = useState(storeSearch || "");
 
   const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likesModalType, setLikesModalType] = useState("likes"); // "likes" or "dislikes"
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
@@ -507,9 +549,24 @@ function Home() {
   const handleLikesClick = async (postId, likesCount) => {
     if (likesCount === 0) return;
     setLikesModalPostId(postId);
+    setLikesModalType("likes");
     setLoadingLikes(true);
     try {
       const res = await axios.get(`${API}/posts/${postId}/likes`);
+      setLikers(res.data);
+    } catch {
+      setLikers([]);
+    }
+    setLoadingLikes(false);
+  };
+
+  const handleDislikesClick = async (postId, dislikesCount) => {
+    if (dislikesCount === 0) return;
+    setLikesModalPostId(postId);
+    setLikesModalType("dislikes");
+    setLoadingLikes(true);
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/dislikes`);
       setLikers(res.data);
     } catch {
       setLikers([]);
@@ -711,6 +768,7 @@ function Home() {
                   onDislike={handleDislike}
                   onRepost={handleRepost}
                   onShowLikes={handleLikesClick}
+                  onShowDislikes={handleDislikesClick}
                 />
               ))}
             </div>
@@ -768,7 +826,7 @@ function Home() {
         <div className="likes-modal-overlay" onClick={() => setLikesModalPostId(null)}>
           <div className="likes-modal-content" onClick={(event) => event.stopPropagation()}>
             <div className="likes-modal-header">
-              <h3>Likes</h3>
+              <h3>{likesModalType === "likes" ? "Likes" : "Dislikes"}</h3>
               <button className="close-modal-btn" onClick={() => setLikesModalPostId(null)}>
                 ✕
               </button>

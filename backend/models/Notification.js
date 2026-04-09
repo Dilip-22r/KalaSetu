@@ -4,7 +4,7 @@ const notificationSchema = new mongoose.Schema(
   {
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    type: { type: String, enum: ["like", "message", "follow", "follow_request", "follow_accept", "follow_accepted_by_me", "follow_rejected_by_me"], required: true },
+    type: { type: String, enum: ["like", "message", "follow", "follow_request", "follow_accept", "follow_reject", "follow_accepted_by_me", "follow_rejected_by_me"], required: true },
     post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
     message: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
     read: { type: Boolean, default: false },

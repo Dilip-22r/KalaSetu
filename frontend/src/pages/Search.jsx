@@ -9,6 +9,39 @@ import "../components/home/Home.css";
 import { PostSkeleton, ProfileCardSkeleton } from "../components/common/Skeleton";
 import API from "../utils/api";
 
+const CreatorSkills = ({ skills }) => {
+  const [showAll, setShowAll] = useState(false);
+  if (!skills) return null;
+  const skillsArray = skills.split(",").map(s => s.trim()).filter(Boolean);
+  
+  // By default, showing only first 2 skills to keep it compact
+  const limit = 2;
+  const hasMore = skillsArray.length > limit;
+  const visibleSkills = showAll ? skillsArray : skillsArray.slice(0, limit);
+
+  return (
+    <div className="creator-skills-wrapper">
+      <div className={`skills-list ${showAll ? "expanded" : ""}`}>
+        <i className="fi fi-sr-palette" />
+        {visibleSkills.map((skill, index) => (
+          <span key={index} className="s-skill-tag">{skill}</span>
+        ))}
+        {!showAll && hasMore && (
+          <button 
+            className="s-more-skills" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAll(true);
+            }}
+          >
+            +{skillsArray.length - limit} more
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 function Search() {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.authUser);
@@ -230,13 +263,26 @@ function Search() {
                   <div className="creator-avatar">
                     {profile.photo ? <img src={profile.photo} alt="" /> : <span>{profile.user?.username?.[0]?.toUpperCase()}</span>}
                   </div>
+                  
                   <div className="creator-info">
-                    <h3>{profile.displayName || profile.user?.fullName}</h3>
-                    <span className={`s-role ${profile.user?.role}`}>{profile.user?.role}</span>
-                    {profile.skills && <p className="creator-skills"><i className="fi fi-sr-palette" /> {profile.skills}</p>}
-                    {profile.location && <p className="creator-location"><i className="fi fi-sr-map-marker" /> {profile.location}</p>}
+                    <div className="creator-header">
+                      <h3>{profile.displayName || profile.user?.fullName}</h3>
+                      <span className={`s-role-badge ${profile.user?.role}`}>{profile.user?.role}</span>
+                    </div>
+                    
+                    <div className="creator-meta">
+                      <CreatorSkills skills={profile.skills} />
+                      {profile.location && (
+                        <p className="creator-location">
+                          <i className="fi fi-sr-map-marker" /> {profile.location}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <button className="view-btn"><i className="fi fi-sr-circle-user" /> View Profile</button>
+
+                  <button className="view-btn">
+                    <i className="fi fi-sr-circle-user" /> View Profile
+                  </button>
                 </div>
               ))}
             </div>

@@ -34,19 +34,19 @@
 
 /* ── Main Container — three-column ─────────────────────────────────────────── */
 .home-container {
-  max-width: 1280px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 22px 40px 60px;
+  padding: 22px 24px 60px;
   display: grid;
-  grid-template-columns: 268px minmax(350px, 490px) 268px;
+  grid-template-columns: 280px minmax(450px, 720px) 280px;
   justify-content: center;
-  gap: 22px;
+  gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 1150px) {
+@media (max-width: 1200px) {
   .home-container {
-    grid-template-columns: 268px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr);
   }
 
   .home-right-sidebar {
@@ -387,6 +387,8 @@
 .post-image-wrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 280px;
   overflow: hidden;
   background: linear-gradient(135deg, var(--home-green-50), var(--home-skin));
   flex-shrink: 0;
@@ -404,8 +406,9 @@
 }
 
 .post-image {
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   display: block;
 }
 
@@ -413,7 +416,7 @@
 .post-body {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   padding: 10px 11px;
   flex: 1;
 }
@@ -472,13 +475,25 @@
 /* Content preview */
 .post-content {
   color: #444;
+  font-size: 13.5px;
+  line-height: 1.55;
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.read-more-btn {
+  color: var(--home-muted);
+  font-weight: 600;
+  cursor: pointer;
   font-size: 13px;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  transition: color 0.2s;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+  color: var(--home-green-700);
 }
 
 /* Tags */
@@ -576,6 +591,7 @@
   gap: 4px;
   padding-top: 8px;
   border-top: 1px solid var(--home-border);
+  margin-top: auto;
 }
 
 .post-action-btn {
@@ -933,17 +949,24 @@
 
 .full-post-image-wrap {
   width: 100%;
-  max-height: 420px;
-  overflow: hidden;
+  max-height: 60vh;
+  overflow-y: auto;
   border-radius: 20px 20px 0 0;
   flex-shrink: 0;
+  background: #111;
+}
+
+.full-post-image-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+.full-post-image-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
 }
 
 .full-post-image {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #111;
+  height: auto;
   display: block;
 }
 

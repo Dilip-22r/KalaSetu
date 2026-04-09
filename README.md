@@ -1,12 +1,12 @@
 # KalaSetu
 
-> *Kala* (Art) + *Setu* (Bridge) — A cultural networking platform bridging artisans, NGOs, and art lovers across India.
+> *Kala* (Art) + *Setu* (Bridge) — A cultural networking platform bridging artisans, NGOs, and art lovers across India
 
 ---
 
 ## 📌 Overview
 
-KalaSetu is a full-stack web application that connects traditional artisans and cultural NGOs with a wider audience. Users can explore cultural posts, discover creators, and engage with India's rich artistic heritage. Registered artisans and NGOs gain additional powers — creating posts, promoting events, and messaging each other direct
+KalaSetu is a full-stack web application that connects traditional artisans and cultural NGOs with a wider audience. Users can explore cultural posts, discover creators, and engage with India's rich artistic heritage. Registered artisans and NGOs gain additional powers — creating posts, promoting events, and messaging each other directly.
 
 ---
 

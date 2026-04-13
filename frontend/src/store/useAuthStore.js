@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { io } from "socket.io-client";
-
-const BASE_URL = "http://localhost:5000";
+import API from "../utils/api";
 
 export const useAuthStore = create((set, get) => ({
   authUser: JSON.parse(localStorage.getItem("user") || "null"),
@@ -22,7 +21,7 @@ export const useAuthStore = create((set, get) => ({
     // Do not reconnect if already running for this user
     if (!authUser || socket?.connected) return;
 
-    const newSocket = io(BASE_URL, {
+    const newSocket = io(API, {
       query: {
         userId: authUser._id,
       },

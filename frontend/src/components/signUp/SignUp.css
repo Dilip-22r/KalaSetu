@@ -43,6 +43,9 @@
 }
 
 .su-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 26px;
   font-weight: 900;
   font-family: "Playfair Display", serif;
@@ -335,8 +338,6 @@
   color: #6c9a9e; 
 }
 
-
-/* ΓöÇΓöÇ Responsive ΓöÇΓöÇ */
 @media (max-width: 500px) {
   .su-navbar { padding: 16px 20px; }
   .su-card { padding: 28px 22px; }
@@ -349,3 +350,7 @@
   animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+.su-brand-logo { height: 48px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2)); }
+
+.su-brand-logo { height: 40px; width: 40px; object-fit: contain; border-radius: 50%; }

@@ -2,7 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
 import { useAuthStore } from "../../store/useAuthStore";
+import API from "../../utils/api";
 import artformsBg from "../../assets/artforms.png";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
 import "./SignIn.css";
 
 function SignIn() {
@@ -27,7 +29,7 @@ function SignIn() {
     if (!formData.email || !formData.password) return setError("All fields are required");
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/auth/login", {
+      const response = await axios.post(`${API}/auth/login`, {
         email: formData.email,
         password: formData.password,
       });
@@ -48,6 +50,7 @@ function SignIn() {
       <div className="si-overlay" />
 
       <nav className="si-nav">
+        <img src={kalasetuLogo} alt="KalaSetu" className="si-brand-logo" />
         <h1 className="si-brand" onClick={() => navigate("/")}>KalaSetu</h1>
         <button className="si-back" onClick={() => navigate("/")}>Back</button>
       </nav>

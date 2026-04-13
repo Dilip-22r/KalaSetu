@@ -22,8 +22,11 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "user", // user | artisan | ngo
+      default: "user",
     },
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );

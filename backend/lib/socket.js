@@ -1,13 +1,23 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import dotenv from "dotenv";
 import { Message } from "../models/Message.js";
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: ["http://localhost:5173"] },
+  cors: {
+    origin: [
+      /localhost:\d+$/,
+      /\.vercel\.app$/,
+      process.env.ALLOWED_ORIGIN || false
+    ].filter(Boolean),
+    credentials: true,
+  },
 });
 
 export function getReceiverSocketId(userId) {
@@ -22,6 +32,12 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("mark_seen", async ({ viewerId, partnerId }) => {
+    // SECURITY: Ensure the socket taking the action actually belongs to the viewer
+    if (String(userId) !== String(viewerId)) {
+      console.warn(`[SECURITY] Socket ${socket.id} attempted to mark messages seen for user ${viewerId}`);
+      return;
+    }
+
     try {
       await Message.updateMany(
         { sender: partnerId, receiver: viewerId, status: { $ne: "seen" } },

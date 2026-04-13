@@ -3,6 +3,8 @@ import { useState } from "react";
 import axios from "axios";
 import "./SignUp.css";
 import artformsBg from "../../assets/artforms.png";
+import kalasetuLogo from "../../assets/kalasetu_logo.png";
+import API from "../../utils/api";
 
 function SignUp() {
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ function SignUp() {
     if (formData.password !== formData.confirmPassword) return setError("Passwords do not match");
 
     try {
-      await axios.post("http://localhost:5000/auth/signup", {
+      await axios.post(`${API}/auth/signup`, {
         fullName: formData.fullName,
         email: formData.email,
         username: formData.username,
@@ -67,7 +69,8 @@ function SignUp() {
 
       {/* Navbar */}
       <nav className="su-navbar">
-        <h1 className="su-brand">KalaSetu</h1>
+        <img src={kalasetuLogo} alt="KalaSetu" className="su-brand-logo" />
+        <h1 className="su-brand" onClick={() => navigate("/")}>KalaSetu</h1>
         <button className="su-back-btn" onClick={() => navigate("/")}>Back</button>
       </nav>
 

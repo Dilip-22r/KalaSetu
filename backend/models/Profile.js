@@ -13,9 +13,14 @@ const profileSchema = new mongoose.Schema(
     gender: { type: String },
     skills: { type: String },
     location: { type: String },
-    about: { type: String },
+    about: { type: String, maxlength: 300 },
     photo: { type: String, default: "" },
     userType: { type: String, enum: ["Artisan", "NGO", "user"] },
+    organizationName: { type: String },
+    verificationDocument: { type: String },
+    organizationId: { type: String },
+    isPrivate: { type: Boolean, default: false },
+    notificationRetentionDays: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

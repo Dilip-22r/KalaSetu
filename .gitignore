@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ─── Environment / Secrets — NEVER commit these ──────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env

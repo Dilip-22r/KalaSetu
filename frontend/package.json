@@ -10,7 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@flaticon/flaticon-uicons": "^3.3.1",
+    "@vercel/analytics": "^2.0.1",
     "axios": "^1.13.4",
+    "framer-motion": "^12.38.0",
+    "gsap": "^3.14.2",
+    "motion": "^12.38.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-easy-crop": "^5.5.6",

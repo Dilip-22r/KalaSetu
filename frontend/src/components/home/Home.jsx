@@ -46,7 +46,7 @@ export function PostCard({ post, currentUser, onLike, onDislike, onRepost, onSho
   const [shareSearch, setShareSearch] = useState("");
   const [sentTo, setSentTo] = useState([]);
   const [shareNote, setShareNote] = useState("");
-  const repostRef = useState(null);
+  const repostRef = useRef(null);
   const categoryIconClass = categoryIcons[post.category] || "fi fi-sr-search";
 
   const handleToggleComments = async () => {

@@ -194,6 +194,22 @@ function Navbar() {
               <i className="fi fi-sr-comments" />
               Messages
             </button>
+            {/* Subscriptions nav item */}
+            <button
+              className={`g-nav-item ${isActivePath("/subscriptions") ? "is-active" : ""}`}
+              onClick={() => navigate("/subscriptions")}
+            >
+              <i className="fi fi-sr-ticket" />
+              Plans
+            </button>
+            {/* Cart nav item */}
+            <button
+              className={`g-nav-item ${isActivePath("/cart") ? "is-active" : ""}`}
+              onClick={() => navigate("/cart")}
+            >
+              <i className="fi fi-sr-shopping-cart" />
+              Cart
+            </button>
           </div>
 
           <div className="g-nav-actions">
@@ -358,6 +374,17 @@ function Navbar() {
                   <div className="g-profile-menu-item" onClick={() => { navigate("/settings"); setShowProfileMenu(false); }}>
                     <i className="fi fi-sr-settings" /> Settings
                   </div>
+                  {/* Subscription links in profile menu */}
+                  <div className="g-profile-menu-divider" />
+                  <div className="g-profile-menu-item" onClick={() => { navigate("/subscriptions"); setShowProfileMenu(false); }}>
+                    <i className="fi fi-sr-ticket" /> Subscription Plans
+                  </div>
+                  <div className="g-profile-menu-item" onClick={() => { navigate("/cart"); setShowProfileMenu(false); }}>
+                    <i className="fi fi-sr-shopping-cart" /> My Cart
+                  </div>
+                  <div className="g-profile-menu-item" onClick={() => { navigate("/transactions"); setShowProfileMenu(false); }}>
+                    <i className="fi fi-sr-receipt" /> Transaction History
+                  </div>
                   <div className="g-profile-menu-divider" />
                   <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
                     <i className="fi fi-sr-sign-out-alt" /> Logout
@@ -435,6 +462,17 @@ function Navbar() {
             )}
           </motion.div>
           <span>Profile</span>
+        </button>
+
+        {/* Mobile: Subscriptions shortcut */}
+        <button
+          className={`g-m-nav-item ${isActivePath("/subscriptions") || isActivePath("/cart") ? "is-active" : ""}`}
+          onClick={() => navigate("/subscriptions")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-ticket" />
+          </motion.div>
+          <span>Plans</span>
         </button>
       </div>
     </>

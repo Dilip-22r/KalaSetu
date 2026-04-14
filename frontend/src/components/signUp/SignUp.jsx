@@ -53,7 +53,7 @@ function SignUp() {
         username: formData.username,
         password: formData.password,
         role: "user",
-      });
+      }, { withCredentials: true });
       setSuccess("✅ Account created successfully! Redirecting to sign in...");
       setTimeout(() => navigate("/signin"), 1500);
     } catch (err) {

@@ -161,6 +161,9 @@ function Landing() {
             <button className="l-nav-ghost" onClick={() => { const el = document.getElementById("features"); if (el) { const top = el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({ top, behavior: "smooth" }); } }}>
               Features
             </button>
+            <button className="l-nav-ghost" onClick={() => navigate("/subscriptions")}>
+              🎟 Plans
+            </button>
             <button className="l-btn-outline" onClick={() => navigate("/signin")}>
               Sign In
             </button>

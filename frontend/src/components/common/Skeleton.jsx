@@ -29,9 +29,10 @@ export const ProfileCardSkeleton = () => (
   <div className="profile-card-skeleton">
     <Skeleton className="profile-card-skeleton-avatar" />
     <Skeleton className="profile-card-skeleton-name" />
-    <Skeleton className="profile-card-skeleton-role" />
-    <Skeleton className="profile-card-skeleton-detail" />
-    <Skeleton className="profile-card-skeleton-detail" style={{ width: "90px", marginBottom: "20px" }} />
+    <div className="profile-card-skeleton-details">
+       <Skeleton className="profile-card-skeleton-tag" />
+       <Skeleton className="profile-card-skeleton-tag" />
+    </div>
     <Skeleton className="profile-card-skeleton-btn" />
   </div>
 );

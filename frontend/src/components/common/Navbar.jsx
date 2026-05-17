@@ -187,15 +187,14 @@ function Navbar() {
               <i className="fi fi-sr-search" />
               Explore
             </button>
-            {effectiveUser.role !== "user" && (
-              <button
-                className={`g-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
-                onClick={() => navigate("/messages")}
-              >
-                <i className="fi fi-sr-comments" />
-                Messages
-              </button>
-            )}
+            <button
+              className={`g-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
+              onClick={() => navigate("/messages")}
+            >
+              <i className="fi fi-sr-comments" />
+              Messages
+            </button>
+
           </div>
 
           <div className="g-nav-actions">
@@ -252,7 +251,7 @@ function Navbar() {
                             if (notification.type === "message") {
                               navigate(`/messages/${notification.sender?._id}`);
                               setShowNotifications(false);
-                            } else if (["follow", "follow_accept", "follow_request"].includes(notification.type)) {
+                            } else if (["follow", "follow_accept", "follow_reject", "follow_request"].includes(notification.type)) {
                               navigate(`/profile/${notification.sender?._id}`);
                               setShowNotifications(false);
                             }
@@ -283,6 +282,7 @@ function Navbar() {
                                     {notification.type === "message" && "sent you a message"}
                                     {notification.type === "follow" && "started following you"}
                                     {notification.type === "follow_accept" && "accepted your follow request"}
+                                    {notification.type === "follow_reject" && "declined your follow request"}
                                     {notification.type === "follow_request" && "requested to follow you"}
                                   </>
                                 );
@@ -359,7 +359,7 @@ function Navbar() {
                   <div className="g-profile-menu-item" onClick={() => { navigate("/settings"); setShowProfileMenu(false); }}>
                     <i className="fi fi-sr-settings" /> Settings
                   </div>
-                  <div className="g-profile-menu-divider" />
+
                   <div className="g-profile-menu-item g-profile-menu-logout" onClick={handleLogoutClick}>
                     <i className="fi fi-sr-sign-out-alt" /> Logout
                   </div>
@@ -412,17 +412,15 @@ function Navbar() {
           <span>Explore</span>
         </button>
 
-        {effectiveUser.role !== "user" && (
-          <button
-            className={`g-m-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
-            onClick={() => navigate("/messages")}
-          >
-            <motion.div whileTap={{ scale: 0.9 }}>
-              <i className="fi fi-sr-comments" />
-            </motion.div>
-            <span>Messages</span>
-          </button>
-        )}
+        <button
+          className={`g-m-nav-item ${isActivePath("/messages") ? "is-active" : ""}`}
+          onClick={() => navigate("/messages")}
+        >
+          <motion.div whileTap={{ scale: 0.9 }}>
+            <i className="fi fi-sr-comments" />
+          </motion.div>
+          <span>Messages</span>
+        </button>
 
         <button
           className={`g-m-nav-item ${isActivePath("/profile") ? "is-active" : ""}`}
@@ -439,6 +437,8 @@ function Navbar() {
           </motion.div>
           <span>Profile</span>
         </button>
+
+
       </div>
     </>
   );

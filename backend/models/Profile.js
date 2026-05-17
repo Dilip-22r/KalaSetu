@@ -13,7 +13,7 @@ const profileSchema = new mongoose.Schema(
     gender: { type: String },
     skills: { type: String },
     location: { type: String },
-    about: { type: String },
+    about: { type: String, maxlength: 300 },
     photo: { type: String, default: "" },
     userType: { type: String, enum: ["Artisan", "NGO", "user"] },
     organizationName: { type: String },

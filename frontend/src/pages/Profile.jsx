@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/common/Navbar";
@@ -8,6 +8,7 @@ import "../components/home/Home.css";
 import { ProfileHeaderSkeleton, PostSkeleton } from "../components/common/Skeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
+import Footer from "../components/common/Footer";
 import API from "../utils/api";
 
 const getRoleLabel = (role) => {
@@ -66,8 +67,10 @@ function Profile() {
   const [following, setFollowing] = useState(false);
   const [requested, setRequested] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showUnfollowDropdown, setShowUnfollowDropdown] = useState(false);
   const [moreModal, setMoreModal] = useState(null);
   const [moreToast, setMoreToast] = useState("");
   const [reportReason, setReportReason] = useState("");
@@ -75,16 +78,32 @@ function Profile() {
   const [moreLoading, setMoreLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [likesModalPostId, setLikesModalPostId] = useState(null);
+  const [likesModalType, setLikesModalType] = useState("likes");
   const [likers, setLikers] = useState([]);
   const [loadingLikes, setLoadingLikes] = useState(false);
-  const [activeTab, setActiveTab] = useState("posts");
+  const [activeTab, setActiveTab] = useState(null);
   const [followersModalOpen, setFollowersModalOpen] = useState(false);
   const [followersList, setFollowersList] = useState([]);
   const [followersLoading, setFollowersLoading] = useState(false);
   const [followersError, setFollowersError] = useState("");
+  const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const [followingList, setFollowingList] = useState([]);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followingError, setFollowingError] = useState("");
+  const [skillsModalOpen, setSkillsModalOpen] = useState(false);
 
   const isOwn = currentUser && currentUser._id === userId;
   const { socket } = useAuthStore();
+  const postsRef = useRef(null);
+
+  // Scroll to posts section whenever a tab becomes active
+  useEffect(() => {
+    if (!activeTab) return;
+    const timer = setTimeout(() => {
+      postsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   // Fetch block status when viewing another user's profile
   useEffect(() => {
@@ -92,7 +111,7 @@ function Profile() {
     axios
       .get(`${API}/reports/block-status/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setIsBlocked(res.data.isBlocked))
-      .catch(() => {});
+      .catch(() => { });
   }, [userId, isOwn]);
 
   const handleUnblock = async () => {
@@ -124,6 +143,26 @@ function Profile() {
       }
     } finally {
       setFollowersLoading(false);
+    }
+  };
+
+  const handleFollowingClick = async () => {
+    setFollowingModalOpen(true);
+    setFollowingLoading(true);
+    setFollowingError("");
+    setFollowingList([]);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${API}/profiles/${userId}/following`, { headers });
+      setFollowingList(res.data.following || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setFollowingError("🔒 This profile is private. Only followers can view this list.");
+      } else {
+        setFollowingError("Could not load following. Please try again.");
+      }
+    } finally {
+      setFollowingLoading(false);
     }
   };
 
@@ -170,20 +209,10 @@ function Profile() {
   };
 
   const handleEditClick = () => {
-    if (currentUser?.role === "user") {
-      openRegisterPrompt();
-      return;
-    }
-
-    navigate("/edit-profile");
+    navigate("/settings?tab=profile");
   };
 
   const handleMessageClick = () => {
-    if (currentUser?.role === "user") {
-      openRegisterPrompt();
-      return;
-    }
-
     navigate(`/messages/${userId}`);
   };
 
@@ -246,6 +275,7 @@ function Profile() {
     if (likesCount === 0) return;
 
     setLikesModalPostId(postId);
+    setLikesModalType("likes");
     setLoadingLikes(true);
 
     try {
@@ -253,6 +283,23 @@ function Profile() {
       setLikers(res.data);
     } catch (err) {
       console.error("Error fetching likes:", err);
+    }
+
+    setLoadingLikes(false);
+  };
+
+  const handleDislikesClick = async (postId, dislikesCount) => {
+    if (dislikesCount === 0) return;
+
+    setLikesModalPostId(postId);
+    setLikesModalType("dislikes");
+    setLoadingLikes(true);
+
+    try {
+      const res = await axios.get(`${API}/posts/${postId}/dislikes`);
+      setLikers(res.data);
+    } catch (err) {
+      console.error("Error fetching dislikes:", err);
     }
 
     setLoadingLikes(false);
@@ -319,6 +366,7 @@ function Profile() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadProfileData = async () => {
       // Fire all three requests in parallel
       const token = localStorage.getItem("token");
@@ -353,6 +401,7 @@ function Profile() {
         setFollowing(followResult.value.data.following);
         setRequested(followResult.value.data.requested);
         setFollowersCount(followResult.value.data.followersCount);
+        setFollowingCount(followResult.value.data.followingCount || 0);
       }
     };
 
@@ -413,22 +462,55 @@ function Profile() {
                     {currentUser.email}
                   </span>
                 </div>
+
+                <div className="prof-stats-row">
+                  {currentUser.role !== "user" && (
+                    <div className="prof-stat-card">
+                      <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
+                      <strong>0</strong>
+                      <small>Likes</small>
+                    </div>
+                  )}
+
+                  <div
+                    className={`prof-stat-card prof-stat-clickable ${currentUser.role === "user" ? "prof-stat-compact" : ""}`}
+                    onClick={handleFollowingClick}
+                  >
+                    <span className="prof-stat-icon"><i className="fi fi-sr-user-check" /></span>
+                    <strong>{followingCount}</strong>
+                    <small>Following</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="prof-hero-actions">
+                <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
+                  <i className="fi fi-sr-pencil" />
+                  Edit Profile
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="prof-empty-state">
-            <div className="prof-empty-icon">
-              <i className="fi fi-sr-circle-user" />
-            </div>
-            <h3 className="display-serif">Your portfolio is ready to be shaped</h3>
-            <p>Complete your profile to add your location, skills, story, and cultural focus.</p>
-            <button
-              className="prof-primary-btn"
-              onClick={() => navigate(currentUser?.role === "user" ? "/register" : "/edit-profile")}
-            >
-              {currentUser?.role === "user" ? "Register as Artisan / NGO" : "Complete Profile"}
-            </button>
+          {/* Unified Sidebar for Members */}
+          <div className="prof-sidebar-col">
+            <aside className="prof-sidebar">
+              <div className="prof-card prof-register-card">
+                <h3>
+                  <i className="fi fi-sr-star" style={{ color: "var(--brand-500)" }} />
+                  Join the Movement
+                </h3>
+                <p className="prof-register-desc">
+                  Register as an Artisan or NGO to build your portfolio, share cultural stories, and unlock messaging.
+                </p>
+                <button 
+                  className="prof-primary-btn prof-register-sidebar-btn" 
+                  onClick={() => navigate("/register")}
+                >
+                  Register Now
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
@@ -477,140 +559,276 @@ function Profile() {
       )}
 
       <div className="prof-container">
-        <div className="prof-hero">
-          <div className="prof-cover">
-            <div className="prof-cover-content">
-              <span className="prof-cover-kicker">KalaSetu Portfolio</span>
-            </div>
-          </div>
-
-          <div className="prof-hero-body">
-            <div className="prof-avatar-wrap">
-              {profile.photo ? (
-                <img src={profile.photo} alt={displayName} className="prof-avatar-img" />
-              ) : (
-                <div className="prof-avatar-initials">
-                  {profileUser?.username?.[0]?.toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className="prof-hero-main">
-              <div className="prof-name-row">
-                <h2 className="display-serif">{displayName}</h2>
-                <span className={`prof-role-badge ${profileUser?.role}`}>{roleLabel}</span>
+        {/* Hero + Sidebar side by side */}
+        <div className="prof-hero-with-sidebar">
+          <div className="prof-hero">
+            <div className="prof-cover">
+              <div className="prof-cover-content">
+                <span className="prof-cover-kicker">KalaSetu Portfolio</span>
               </div>
-              <p className="prof-username">@{profileUser?.username}</p>
+            </div>
 
-              <div className="prof-meta-row" style={{ marginTop: '10px' }}>
-                {profile.location && (
-                  <span>
-                    <i className="fi fi-sr-map-marker" style={{ color: '#d1437b' }} />
-                    {profile.location}
-                  </span>
+            <div className="prof-hero-body">
+              <div className="prof-avatar-wrap">
+                {profile.photo ? (
+                  <img src={profile.photo} alt={displayName} className="prof-avatar-img" />
+                ) : (
+                  <div className="prof-avatar-initials">
+                    {profileUser?.username?.[0]?.toUpperCase()}
+                  </div>
                 )}
-                {skillTags.length > 0 && (
-                  <span>
-                    <i className="fi fi-sr-palette" style={{ color: '#C4704A' }} />
-                    {skillTags[0]}
-                  </span>
-                )}
-                <span>
-                  <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
-                  Joined {joinDate}
-                </span>
               </div>
 
-              <div className="prof-stats-row">
-                <div className="prof-stat-card">
-                  <span className="prof-stat-icon"><i className="fi fi-sr-apps" /></span>
-                  <strong>{posts.filter(p => p.author?._id === userId).length}</strong>
-                  <small>Posts</small>
+              <div className="prof-hero-main">
+                <div className="prof-name-row">
+                  <h2 className="display-serif">{displayName}</h2>
+                  <span className={`prof-role-badge ${profileUser?.role}`}>{roleLabel}</span>
                 </div>
-                <div
-                  className="prof-stat-card prof-stat-clickable"
-                  onClick={handleFollowersClick}
-                  title="View followers"
-                >
-                  <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
-                  <strong>{followersCount}</strong>
-                  <small>Followers</small>
-                </div>
-              </div>
-            </div>
+                <p className="prof-username">@{profileUser?.username}</p>
 
-            <div className="prof-hero-actions">
-              {isOwn && (
-                <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
-                  <i className="fi fi-sr-pencil" />
-                  Edit Profile
-                </button>
-              )}
-              {currentUser && !isOwn && !isBlocked && (
-                <button
-                  className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
-                  style={requested ? { background: "rgba(47, 111, 109, 0.15)", color: "var(--brand-900)" } : {}}
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                >
-                  <i className={`fi ${following ? "fi-sr-user-check" : requested ? "fi-sr-time-check" : "fi-sr-user-add"}`} />
-                  {following ? "Following" : requested ? "Requested" : "Follow"}
-                </button>
-              )}
-              {currentUser && !isOwn && (
-                <button
-                  className={`prof-secondary-btn${isBlocked ? " prof-btn-disabled" : ""}`}
-                  onClick={isBlocked ? undefined : handleMessageClick}
-                  title={isBlocked ? "Messaging unavailable" : "Send a message"}
-                  disabled={isBlocked}
-                >
-                  <i className="fi fi-sr-comments" />
-                  {isBlocked ? "Messaging unavailable" : "Message"}
-                </button>
-              )}
-              {currentUser && !isOwn && (
-                <div className="prof-more-wrap">
-                  <button
-                    className="prof-more-btn"
-                    onClick={() => setShowMoreMenu((value) => !value)}
-                    title="More options"
-                  >
-                    More
-                  </button>
-                  {showMoreMenu && (
-                    <>
-                      <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
-                      <div className="prof-more-dropdown">
-                        <button onClick={() => isBlocked ? handleUnblock() : handleMoreAction("block")}>{isBlocked ? "Unblock user" : "Block user"}</button>
-                        {!isBlocked && <button onClick={() => handleMoreAction("report")}>Report user</button>}
-                      </div>
-                    </>
+                <div className="prof-meta-row" style={{ marginTop: '10px' }}>
+                  {profile.location && (
+                    <span>
+                      <i className="fi fi-sr-map-marker" style={{ color: '#d1437b' }} />
+                      {profile.location}
+                    </span>
+                  )}
+                  {profileUser?.role !== "user" && (
+                    <span>
+                      <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
+                      Joined {joinDate}
+                    </span>
                   )}
                 </div>
-              )}
+
+                <div className="prof-stats-row">
+                  {profileUser?.role !== "user" && (
+                    <div className="prof-stat-card">
+                      <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
+                      <strong>{totalLikes}</strong>
+                      <small>Likes</small>
+                    </div>
+                  )}
+                  {profileUser?.role !== "user" && (
+                    <div
+                      className="prof-stat-card prof-stat-clickable"
+                      onClick={handleFollowersClick}
+                      title="View followers"
+                    >
+                      <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
+                      <strong>{followersCount}</strong>
+                      <small>Followers</small>
+                    </div>
+                  )}
+                  <div
+                    className={`prof-stat-card prof-stat-clickable ${profileUser?.role === "user" ? "prof-stat-compact" : ""}`}
+                    onClick={handleFollowingClick}
+                    title="View following"
+                  >
+                    <span className="prof-stat-icon"><i className="fi fi-sr-user-check" /></span>
+                    <strong>{followingCount}</strong>
+                    <small>Following</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="prof-hero-actions">
+                {isOwn && (
+                  <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
+                    <i className="fi fi-sr-pencil" />
+                    Edit Profile
+                  </button>
+                )}
+                {currentUser && !isOwn && !isBlocked && profileUser?.role !== "user" && (
+                  <div className="prof-more-wrap" style={{ position: "relative" }}>
+                    <button
+                      className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
+                      style={requested ? { background: "rgba(47, 111, 109, 0.15)", color: "var(--brand-900)" } : {}}
+                      onClick={() => following ? setShowUnfollowDropdown((prev) => !prev) : handleFollow()}
+                      disabled={followLoading}
+                    >
+                      <i className={`fi ${following ? "fi-sr-user-check" : requested ? "fi-sr-time-check" : "fi-sr-user-add"}`} />
+                      {following ? "Following" : requested ? "Requested" : "Follow"}
+                    </button>
+                    {following && showUnfollowDropdown && (
+                      <>
+                        <div className="prof-more-overlay" onClick={() => setShowUnfollowDropdown(false)} />
+                        <div className="prof-more-dropdown" style={{ right: 0, left: "auto", minWidth: "120px" }}>
+                          <button
+                            className="prof-unfollow-btn"
+                            onClick={() => { setShowUnfollowDropdown(false); handleFollow(); }}
+                            style={{ color: "#e11d48", fontWeight: "600" }}
+                          >
+                            Unfollow
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {currentUser && !isOwn && (
+                  <button
+                    className={`prof-secondary-btn${isBlocked ? " prof-btn-disabled" : ""}`}
+                    onClick={isBlocked ? undefined : handleMessageClick}
+                    title={isBlocked ? "Messaging unavailable" : "Send a message"}
+                    disabled={isBlocked}
+                  >
+                    <i className="fi fi-sr-comments" />
+                    {isBlocked ? "Messaging unavailable" : "Message"}
+                  </button>
+                )}
+                {currentUser && !isOwn && (
+                  <div className="prof-more-wrap">
+                    <button
+                      className="prof-more-btn"
+                      onClick={() => setShowMoreMenu((value) => !value)}
+                      title="More options"
+                    >
+                      More
+                    </button>
+                    {showMoreMenu && (
+                      <>
+                        <div className="prof-more-overlay" onClick={() => setShowMoreMenu(false)} />
+                        <div className="prof-more-dropdown">
+                          <button onClick={() => isBlocked ? handleUnblock() : handleMoreAction("block")}>{isBlocked ? "Unblock user" : "Block user"}</button>
+                          {!isBlocked && <button onClick={() => handleMoreAction("report")}>Report user</button>}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Sidebar column: cards + content toggle buttons */}
+          {!(profileUser?.role === "user" && !isOwn) && (
+            <div className="prof-sidebar-col">
+              <aside className="prof-sidebar">
+                {profileUser?.role === "user" && (
+                  <div className="prof-card prof-register-card">
+                    <h3>
+                      <i className="fi fi-sr-star" style={{ color: "var(--brand-500)" }} />
+                      Join the Movement
+                    </h3>
+                    <p className="prof-register-desc">
+                      Register as an Artisan or NGO to build your portfolio, share cultural stories, and unlock messaging.
+                    </p>
+                    <button 
+                      className="prof-primary-btn prof-register-sidebar-btn" 
+                      onClick={() => navigate("/register")}
+                    >
+                      Register Now
+                    </button>
+                  </div>
+                )}
+
+                {profileUser?.role !== "user" && (
+                  <>
+                    <div className="prof-card">
+                      <h3>
+                        <i className="fi fi-sr-comment-alt-dots" />
+                        About
+                      </h3>
+                      <p>{profile.about || "This member has not added a profile story yet."}</p>
+                    </div>
+
+                    {skillTags.length > 0 && (
+                      <div className="prof-card">
+                        <h3>
+                          <i className="fi fi-sr-palette" />
+                          Skills &amp; Focus
+                        </h3>
+                        <div className="prof-side-tags-row">
+                          {skillTags.slice(0, 2).map((skill) => (
+                            <span key={skill} className="prof-skill-pill">
+                              {skill}
+                            </span>
+                          ))}
+                          {skillTags.length > 2 && (
+                            <button
+                              className="prof-skills-more-btn"
+                              onClick={() => setSkillsModalOpen(true)}
+                            >
+                              +{skillTags.length - 2} more
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="prof-card">
+                      <h3>
+                        <i className="fi fi-sr-info" />
+                        Details
+                      </h3>
+                      <div className="prof-details">
+                        {profile.userType && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Type</span>
+                            <span className={`prof-type ${profileUser?.role}`}>{profile.userType}</span>
+                          </div>
+                        )}
+                        {profile.organizationId && profileUser?.role === "ngo" && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Org ID</span>
+                            <span>{profile.organizationId}</span>
+                          </div>
+                        )}
+                        {profile.age && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Age</span>
+                            <span>{profile.age}</span>
+                          </div>
+                        )}
+                        {profile.gender && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Gender</span>
+                            <span>{profile.gender}</span>
+                          </div>
+                        )}
+                        <div className="prof-detail-row">
+                          <span className="prof-detail-label">Email</span>
+                          <span>{profileUser?.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </aside>
+
+              {/* Posts / Reposts toggle buttons */}
+              {profileUser?.role !== "user" && (
+                <div className="prof-content-btns">
+                  <button
+                    className={`prof-content-btn ${activeTab === "posts" ? "active" : ""}`}
+                    onClick={() => setActiveTab(activeTab === "posts" ? null : "posts")}
+                  >
+                    <i className="fi fi-sr-apps" />
+                    Posts
+                    <span className="prof-content-btn-count">
+                      {posts.filter(p => p.author?._id === userId).length}
+                    </span>
+                  </button>
+                  <button
+                    className={`prof-content-btn ${activeTab === "reposts" ? "active" : ""}`}
+                    onClick={() => setActiveTab(activeTab === "reposts" ? null : "reposts")}
+                  >
+                    <i className="fi fi-sr-arrows-retweet" />
+                    Reposts
+                    <span className="prof-content-btn-count">
+                      {posts.filter(p => p.reposts?.includes(userId)).length}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="prof-body">
-          <div className="prof-posts-section">
-            <div className="prof-tabs">
-              <button
-                className={`prof-tab ${activeTab === "posts" ? "active" : ""}`}
-                onClick={() => setActiveTab("posts")}
-              >
-                <i className="fi fi-sr-apps" />
-                Posts
-              </button>
-              <button
-                className={`prof-tab ${activeTab === "reposts" ? "active" : ""}`}
-                onClick={() => setActiveTab("reposts")}
-              >
-                <i className="fi fi-sr-arrows-retweet" />
-                Reposts
-              </button>
-            </div>
-
+        {/* Posts section — only visible when a tab is active */}
+        {activeTab && (
+          <div className="prof-posts-section" ref={postsRef}>
             <div className="prof-posts-header">
               <div>
                 <h3 className="prof-posts-title">
@@ -628,7 +846,7 @@ function Profile() {
                 </p>
               </div>
 
-              {isOwn && profileUser?.role !== "user" && activeTab === "posts" && (
+              {isOwn && profileUser?.role !== "user" && (
                 <button className="prof-primary-btn prof-posts-cta" onClick={() => navigate("/create-post")}>
                   Create Post
                 </button>
@@ -649,7 +867,7 @@ function Profile() {
                 </p>
               </div>
             ) : (
-              <div className="posts-grid" style={{ maxWidth: "600px", margin: "0 auto", padding: "10px 0" }}>
+              <div className="prof-posts-grid">
                 {posts
                   .filter(p => activeTab === "posts" ? p.author?._id === userId : p.reposts?.includes(userId))
                   .map((post) => (
@@ -662,82 +880,19 @@ function Profile() {
                       onDislike={handleDislike}
                       onRepost={handleRepost}
                       onShowLikes={handleLikesClick}
+                      onShowDislikes={handleDislikesClick}
                       onEdit={() => navigate(`/edit-post/${post._id}`)}
                       onDelete={() => handleDeletePost(post._id)}
+                      useModalForComments={true}
                     />
                   ))}
               </div>
             )}
           </div>
-
-          <aside className="prof-sidebar">
-            <div className="prof-card">
-              <h3>
-                <i className="fi fi-sr-comment-alt-dots" />
-                About
-              </h3>
-              <p>{profile.about || "This member has not added a profile story yet."}</p>
-            </div>
-
-            {skillTags.length > 0 && (
-              <div className="prof-card">
-                <h3>
-                  <i className="fi fi-sr-palette" />
-                  Skills & Focus
-                </h3>
-                <div className="prof-side-tags">
-                  {skillTags.map((skill) => (
-                    <span key={skill} className="prof-skill-pill">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="prof-card">
-              <h3>
-                <i className="fi fi-sr-user" />
-                Details
-              </h3>
-              <div className="prof-details">
-                {profile.age && (
-                  <div className="prof-detail-row">
-                    <span className="prof-detail-label">Age</span>
-                    <span>{profile.age}</span>
-                  </div>
-                )}
-                {profile.gender && (
-                  <div className="prof-detail-row">
-                    <span className="prof-detail-label">Gender</span>
-                    <span>{profile.gender}</span>
-                  </div>
-                )}
-                {profile.userType && (
-                  <div className="prof-detail-row">
-                    <span className="prof-detail-label">Type</span>
-                    <span className={`prof-type ${profileUser?.role}`}>{profile.userType}</span>
-                  </div>
-                )}
-                <div className="prof-detail-row">
-                  <span className="prof-detail-label">Email</span>
-                  <span>{profileUser?.email}</span>
-                </div>
-              </div>
-            </div>
-
-            {currentUser && !isOwn && (
-              <div className="prof-card prof-contact-rail">
-                <h3><i className="fi fi-sr-comment-alt-dots" /> Contact</h3>
-                <p>Open a conversation for collaborations, cultural projects, or event opportunities.</p>
-                <button className="prof-primary-btn" onClick={handleMessageClick}>
-                  <i className="fi fi-sr-comment-alt-dots" /> Message
-                </button>
-              </div>
-            )}
-          </aside>
-        </div>
+        )}
       </div>
+
+      <Footer />
 
       {moreModal && (
         <div className="prof-logout-overlay" onClick={() => { setMoreModal(null); setReportReason(""); setReportDetails(""); }}>
@@ -798,8 +953,13 @@ function Profile() {
         <div className="prof-logout-overlay" onClick={() => setLikesModalPostId(null)}>
           <div className="prof-more-modal prof-likes-modal" onClick={(event) => event.stopPropagation()}>
             <div className="prof-likes-header">
-              <h3 className="display-serif">Likes</h3>
-              <button onClick={() => setLikesModalPostId(null)}>Close</button>
+              <h3 className="display-serif">
+                <i className={likesModalType === "likes" ? "fi fi-sr-heart" : "fi fi-sr-thumbs-down"} style={{ marginRight: 8, color: "var(--brand-700)" }} />
+                {likesModalType === "likes" ? "Likes" : "Dislikes"}
+              </h3>
+              <button onClick={() => setLikesModalPostId(null)}>
+                <i className="fi fi-sr-cross-small" />
+              </button>
             </div>
             <div className="prof-likes-body">
               {loadingLikes ? (
@@ -821,6 +981,69 @@ function Profile() {
                       <div className="prof-liker-info">
                         <span className="prof-liker-username">{user.username}</span>
                         <span className="prof-liker-name">{user.fullName}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Following Modal */}
+      {followingModalOpen && (
+        <div className="prof-logout-overlay" onClick={() => setFollowingModalOpen(false)}>
+          <div className="prof-more-modal prof-followers-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prof-likes-header">
+              <h3 className="display-serif">
+                <i className="fi fi-sr-user-check" style={{ marginRight: 8, color: "var(--brand-700)" }} />
+                Following
+                {!followingLoading && !followingError && (
+                  <span className="prof-followers-count-badge">{followingList.length}</span>
+                )}
+              </h3>
+              <button onClick={() => setFollowingModalOpen(false)}>
+                <i className="fi fi-sr-cross-small" />
+              </button>
+            </div>
+
+            <div className="prof-likes-body">
+              {followingLoading ? (
+                <div className="prof-likes-loading">
+                  <div className="prof-spinner" />
+                  <p style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 14 }}>Loading following...</p>
+                </div>
+              ) : followingError ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon">
+                    <i className="fi fi-sr-lock" />
+                  </div>
+                  <p>{followingError}</p>
+                </div>
+              ) : followingList.length === 0 ? (
+                <div className="prof-followers-locked">
+                  <div className="prof-followers-lock-icon" style={{ background: "rgba(47,111,109,0.08)" }}>
+                    <i className="fi fi-sr-user-check" style={{ color: "var(--brand-700)" }} />
+                  </div>
+                  <p style={{ color: "var(--text-muted)" }}>Not following anyone yet.</p>
+                </div>
+              ) : (
+                <div className="prof-likers-list">
+                  {followingList.map((person) => (
+                    <div
+                      key={person._id}
+                      className="prof-liker-item"
+                      onClick={() => { setFollowingModalOpen(false); navigate(`/profile/${person._id}`); }}
+                    >
+                      {person.photo ? (
+                        <img src={person.photo} alt={person.username} className="prof-follower-avatar-img" />
+                      ) : (
+                        <div className="prof-liker-avatar">{person.username?.[0]?.toUpperCase()}</div>
+                      )}
+                      <div className="prof-liker-info">
+                        <span className="prof-liker-username">{person.displayName || person.fullName || person.username}</span>
+                        <span className="prof-liker-name">@{person.username}</span>
                       </div>
                     </div>
                   ))}
@@ -889,6 +1112,25 @@ function Profile() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {skillsModalOpen && (
+        <div className="prof-logout-overlay" style={{ zIndex: 10000 }}>
+          <div className="prof-more-modal prof-likes-modal">
+            <div className="prof-likes-header">
+              <h3>Skills & Focus</h3>
+              <button onClick={() => setSkillsModalOpen(false)}>Close</button>
+            </div>
+            <div className="prof-likes-body" style={{ padding: '24px' }}>
+              <div className="prof-skill-tags" style={{ marginTop: 0 }}>
+                {skillTags.map((skill) => (
+                  <span key={skill} className="prof-skill-pill" style={{ fontSize: '13px', padding: '10px 16px' }}>
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

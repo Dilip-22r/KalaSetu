@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";
 import { useAuthStore } from "../../store/useAuthStore";
+
 import API from "../../utils/api";
 import artformsBg from "../../assets/artforms.png";
 import kalasetuLogo from "../../assets/kalasetu_logo.png";
@@ -15,6 +16,7 @@ function SignIn() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { setAuthUser } = useAuthStore();
+
 
   const handleChange = (e) => {
     setFormData({
@@ -32,10 +34,13 @@ function SignIn() {
       const response = await axios.post(`${API}/auth/login`, {
         email: formData.email,
         password: formData.password,
-      });
+      }, { withCredentials: true });
       setAuthUser(response.data.user);
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
+
+
+
       setSuccess("✅ Signed in successfully! Redirecting...");
       setTimeout(() => navigate("/home"), 1200);
     } catch (err) {

@@ -81,7 +81,7 @@ function Messages() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    if (!token || !user || user.role === "user") {
+    if (!token || !user) {
       setConversations([]);
       setLoadingConvs(false);
       return;
@@ -126,7 +126,7 @@ function Messages() {
   }, [token]);
 
   const openConversation = useCallback(async (uid) => {
-    if (!uid || !token || !user || user.role === "user") return;
+    if (!uid || !token || !user) return;
 
     // Clear unread badge immediately when opening
     setUnreadMap((prev) => ({ ...prev, [uid]: 0 }));
@@ -178,20 +178,20 @@ function Messages() {
   }, [fetchConversations]);
 
   useEffect(() => {
-    if (!activeUserId || !user || user.role === "user") return;
+    if (!activeUserId || !user) return;
     setSelectedUserId(activeUserId);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     openConversation(activeUserId);
   }, [activeUserId, openConversation, setSelectedUserId, user]);
 
   useEffect(() => {
-    if (!user || user.role === "user") return undefined;
+    if (!user) return undefined;
     subscribeToMessages();
     return () => unsubscribeFromMessages();
   }, [subscribeToMessages, unsubscribeFromMessages, user]);
 
   useEffect(() => {
-    if (!socket || !user || user.role === "user") return undefined;
+    if (!socket || !user) return undefined;
 
     const handleNew = (msg) => {
       const senderId = String(msg.sender?._id ?? msg.sender);
@@ -334,7 +334,7 @@ function Messages() {
     return acc;
   }, {});
 
-  if (!user || user.role === "user") {
+  if (!user) {
     return (
       <div className="msg-bg">
         <Navbar />
@@ -480,7 +480,7 @@ function Messages() {
                 <button className="msg-back-btn mobile-only" onClick={() => setMobileView("list")}>
                   <i className="fi fi-sr-arrow-left" />
                 </button>
-                <div className="msg-chat-avatar-wrap">
+                <div className="msg-chat-avatar-wrap" onClick={() => navigate(`/profile/${activeUserId}`)} style={{cursor: 'pointer'}}>
                   <div className="msg-chat-avatar">
                     {activeUser?.photo ? (
                       <img src={activeUser.photo} alt="" className="msg-chat-avatar-img" />
@@ -640,6 +640,8 @@ function Messages() {
                       ? "You have blocked this user. Unblock them to send messages."
                       : messagingBlockReason === "messaging_unavailable" || messagingBlockReason === "unavailable"
                       ? "Messaging is unavailable with this user."
+                      : activeUser?.role === "user"
+                      ? "Messaging is not available."
                       : "Follow this user to send them a message."}
                   </span>
                 </div>

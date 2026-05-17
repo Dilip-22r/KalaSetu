@@ -5,8 +5,8 @@ const blockSchema = new mongoose.Schema(
     blocker: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     blocked: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   },
-  { timestamps: true }
-);
+  { timestamps: true }  
+); //no need of index here in schema 
 
 // Unique: a user can only block another once
 blockSchema.index({ blocker: 1, blocked: 1 }, { unique: true });
@@ -15,3 +15,4 @@ blockSchema.index({ blocker: 1, blocked: 1 }, { unique: true });
 blockSchema.index({ blocked: 1, blocker: 1 });
 
 export const Block = mongoose.model("Block", blockSchema);
+

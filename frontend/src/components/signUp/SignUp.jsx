@@ -53,7 +53,7 @@ function SignUp() {
         username: formData.username,
         password: formData.password,
         role: "user",
-      });
+      }, { withCredentials: true });
       setSuccess("✅ Account created successfully! Redirecting to sign in...");
       setTimeout(() => navigate("/signin"), 1500);
     } catch (err) {
@@ -70,7 +70,7 @@ function SignUp() {
       {/* Navbar */}
       <nav className="su-navbar">
         <img src={kalasetuLogo} alt="KalaSetu" className="su-brand-logo" />
-        <h1 className="su-brand">KalaSetu</h1>
+        <h1 className="su-brand" onClick={() => navigate("/")}>KalaSetu</h1>
         <button className="su-back-btn" onClick={() => navigate("/")}>Back</button>
       </nav>
 

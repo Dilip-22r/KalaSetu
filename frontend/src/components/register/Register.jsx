@@ -121,9 +121,12 @@ function Register() {
       const storedUser = JSON.parse(localStorage.getItem("user") || "null");
       if (!storedUser) throw new Error("User not found locally");
 
+      const token = localStorage.getItem("token");
       const roleRes = await axios.put(`${API}/auth/upgrade-role`, {
         userId: storedUser._id,
         newRole: data.userType.toLowerCase(),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       const newToken = roleRes.data.token;
@@ -391,7 +394,10 @@ function Register() {
                   <textarea
                     placeholder=""
                     rows={4}
-                    {...register("about", { required: "Please write an about section" })}
+                    {...register("about", { 
+                      required: "Please write an about section",
+                      maxLength: { value: 300, message: "Maximum 300 characters allowed" }
+                    })}
                   />
                   {errors.about && <small>{errors.about.message}</small>}
                 </div>

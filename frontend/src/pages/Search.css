@@ -148,33 +148,32 @@
 
 .s-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .creator-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--surface-card);
   border: 1px solid rgba(47, 111, 109, 0.08);
-  box-shadow: 0 4px 14px rgba(43, 43, 43, 0.07);
+  box-shadow: 0 4px 14px rgba(43, 43, 43, 0.05);
   cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
 }
 
-.creator-card:hover,
-.s-post-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 36px rgba(43, 43, 43, 0.12);
+.creator-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(43, 43, 43, 0.1);
+  border-color: rgba(47, 111, 109, 0.15);
 }
 
 .creator-avatar {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 14px;
   overflow: hidden;
   background: linear-gradient(135deg, var(--brand-700), var(--brand-300));
@@ -182,8 +181,10 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .creator-avatar img {
@@ -193,58 +194,129 @@
 }
 
 .creator-info {
-  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.creator-info h3 {
-  color: var(--text-strong);
-  font-size: 14px;
-  margin-bottom: 5px;
+.creator-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.s-role {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: var(--radius-pill);
-  font-size: 10px;
+.creator-header h3 {
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 10px;
+  color: var(--text-strong);
+  margin: 0;
 }
 
-.s-role.artisan {
-  background: rgba(209, 123, 73, 0.14);
+.s-role-badge {
+  display: inline-flex;
+  width: fit-content;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.s-role-badge.artisan {
+  background: rgba(209, 123, 73, 0.12);
   color: var(--accent-600);
 }
 
-.s-role.ngo {
-  background: rgba(47, 111, 109, 0.12);
+.s-role-badge.ngo {
+  background: rgba(47, 111, 109, 0.1);
   color: var(--brand-700);
 }
 
-.creator-skills,
+.creator-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.creator-skills-wrapper {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.skills-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.skills-list.expanded {
+  flex-wrap: wrap;
+}
+
+.skills-list i {
+  font-size: 12px;
+  color: var(--brand-500);
+  margin-right: 2px;
+}
+
+.s-skill-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brand-900);
+  background: rgba(167, 196, 188, 0.18);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.s-more-skills {
+  background: rgba(209, 123, 73, 0.1);
+  border: 1px dashed var(--accent-600);
+  color: var(--accent-600);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
 .creator-location {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  font-size: 12px;
   color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.7;
+  margin: 0;
+}
+
+.creator-location i {
+  color: #d1437b;
 }
 
 .view-btn {
   width: 100%;
-  margin-top: auto;
-  padding: 9px 14px;
+  margin-top: 14px;
+  padding: 10px;
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.view-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(209, 123, 73, 0.2);
 }
 
 .s-posts {
@@ -405,18 +477,58 @@
 .explore-feed .posts-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
   align-items: stretch; /* Make all posts same size vertically */
 }
 
+/* 2. Consistent Card Layout */
 .explore-feed .posts-grid .post-card {
   height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
 }
 
+/* 1. Uniform Image Size */
+.explore-feed .posts-grid .post-card .post-image-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3; /* Fixed aspect ratio */
+  background: #fdfdfd; /* Neutral background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(47, 111, 109, 0.08);
+}
+
+.explore-feed .posts-grid .post-card .post-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* NOT cover */
+}
+
+/* Ensure body takes remaining space */
 .explore-feed .posts-grid .post-card .post-body {
   flex: 1; /* Pushes footer/actions to bottom naturally */
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 14px;
+}
+
+/* 3. Text Truncation — enforcing 2 lines visually */
+.explore-feed .posts-grid .post-card .post-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+/* Keep spacing uniform between image, title, and actions */
+.explore-feed .posts-grid .post-card .post-actions {
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 @media (max-width: 1024px) {

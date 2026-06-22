@@ -16,9 +16,27 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    // password: {
+    //   type: String,
+    //   required: true,
+    // },
     password: {
       type: String,
-      required: true,
+      required: function () {
+        return this.authMethod === "local";
+        // Password only required for normal signups
+      },
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      // Allows multiple local accounts with null googleId
+    },
+    authMethod: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     role: {
       type: String,

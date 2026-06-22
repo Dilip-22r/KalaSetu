@@ -1,0 +1,230 @@
+.sm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.sm-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: min(500px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.sm-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sm-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.sm-close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+}
+
+.sm-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sm-section h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.sm-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.sm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sm-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.sm-select,
+.sm-input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+
+.sm-select:focus,
+.sm-input:focus {
+  border-color: #2A5C58;
+}
+
+.sm-save-btn {
+  margin-top: 8px;
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: #2A5C58;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sm-save-btn:hover {
+  background: #1E4340;
+}
+
+/* Danger Zone */
+.sm-danger-zone {
+  margin-top: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #ffebea;
+}
+
+.sm-danger-title {
+  color: #d32f2f !important;
+}
+
+.sm-danger-btn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background: #fef2f2;
+  color: #d32f2f;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+
+.sm-danger-btn:hover {
+  background: #fee2e2;
+}
+
+/* Delete confirmation modal styling */
+.sm-delete-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.sm-delete-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  border: 1px solid #fee2e2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sm-delete-modal h3 {
+  margin: 0;
+  color: #d32f2f;
+}
+
+.sm-delete-modal p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.sm-error {
+  color: #d32f2f;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.sm-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sm-btn-cancel {
+  background: #f3f4f6;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.sm-btn-confirm {
+  background: #d32f2f;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.sm-btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sm-loading {
+  text-align: center;
+  color: #666;
+  padding: 40px 0;
+}

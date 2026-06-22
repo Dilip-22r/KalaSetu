@@ -13,6 +13,8 @@
   "dependencies": {
     "axios": "^1.13.4",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
@@ -24,7 +26,11 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.8.8",
     "sharp": "^0.34.5",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.0",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

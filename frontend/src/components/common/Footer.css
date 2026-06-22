@@ -1,0 +1,247 @@
+.ks-compact-footer {
+  width: 100%;
+  background-color: #1e293b;
+  color: #94a3b8;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  border-top: 1px solid #334155;
+  margin-top: auto;
+  padding: 18px 32px;
+}
+
+.ks-compact-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ks-compact-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.ks-compact-left:hover {
+  opacity: 0.9;
+}
+
+.ks-compact-logo {
+  height: 22px;
+  width: 22px;
+  object-fit: contain;
+}
+
+.ks-compact-brand {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.3px;
+}
+
+.ks-compact-copy {
+  font-size: 13px;
+  color: #64748b;
+  border-left: 1px solid #334155;
+  padding-left: 12px;
+}
+
+.ks-compact-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.ks-compact-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.ks-compact-links button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.ks-compact-links button:hover {
+  color: #2f6f6d;
+  text-decoration: underline;
+}
+
+.ks-compact-socials {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 1px solid #334155;
+  padding-left: 16px;
+}
+
+.ks-compact-socials button {
+  background: #334155;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fafc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ks-compact-socials button:hover {
+  background: #2f6f6d;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .ks-compact-footer {
+    padding: 16px 20px;
+  }
+  .ks-compact-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .ks-compact-copy {
+    border-left: none;
+    padding-left: 0;
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .ks-compact-left {
+    flex-wrap: wrap;
+  }
+  .ks-compact-socials {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+/* Modals */
+.ks-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 24px;
+}
+
+.ks-modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 100%;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+  animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ks-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 20px;
+}
+
+.ks-modal-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ks-modal-close {
+  background: #f1f5f9;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ks-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.ks-modal-body {
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.ks-modal-body p {
+  margin-bottom: 20px;
+}
+
+.ks-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Toast */
+.ks-toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 16px 24px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  z-index: 9999999;
+  animation: toastEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ks-toast-icon {
+  font-size: 18px;
+}
+
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes toastEnter {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}

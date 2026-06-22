@@ -1,81 +1,37 @@
 import express from "express";
-import { Profile } from "../models/Profile.js";
-import { User } from "../models/User.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage, validatePdf } from "../middleware/imageValidationMiddleware.js";
+import {
+  getCreators,
+  followUser,
+  acceptFollow,
+  rejectFollow,
+  getFollowers,
+  getFollowStatus,
+  getFollowing,
+  getProfile,
+  upsertProfile,
+} from "../controllers/profileController.js";
 
 const router = express.Router();
 
+router.get("/creators", getCreators);
 
-// GET all artisans & NGOs (for search)
-router.get("/creators", async (req, res) => {
-  try {
-    const { search, type } = req.query;
-    const userFilter = { role: { $in: ["artisan", "ngo"] } };
-    if (type) userFilter.role = type.toLowerCase();
+router.put("/:userId/follow", requireAuth, followUser);
 
-    const users = await User.find(userFilter).select("-password").lean();
-    const userIds = users.map((u) => u._id);
+router.put("/:userId/accept-follow", requireAuth, acceptFollow);
 
-    const profileFilter = { user: { $in: userIds } };
-    if (search) {
-      profileFilter.$or = [
-        { displayName: { $regex: search, $options: "i" } },
-        { skills: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-      ];
-    }
+router.put("/:userId/reject-follow", requireAuth, rejectFollow);
 
-    const profiles = await Profile.find(profileFilter).populate("user", "username fullName role email").lean();
-    res.json(profiles);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get("/:userId/followers", getFollowers);
 
-// GET profile by userId
-router.get("/:userId", async (req, res) => {
-  try {
-    const profile = await Profile.findOne({ user: req.params.userId }).populate(
-      "user",
-      "username fullName role email createdAt"
-    );
-    if (!profile) return res.status(404).json({ message: "Profile not found" });
-    res.json(profile);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get("/:userId/follow-status", requireAuth, getFollowStatus);
 
-// CREATE or UPDATE profile
-router.post("/", requireAuth, async (req, res) => {
-  try {
-    const { displayName, age, gender, skills, location, about, photo, userType } = req.body;
-    let profile = await Profile.findOne({ user: req.user.id });
+router.get("/:userId/following", getFollowing);
 
-    // Only update fields that were explicitly sent (allows partial updates like photo removal)
-    const updates = {};
-    if (displayName !== undefined) updates.displayName = displayName;
-    if (age !== undefined) updates.age = age;
-    if (gender !== undefined) updates.gender = gender;
-    if (skills !== undefined) updates.skills = skills;
-    if (location !== undefined) updates.location = location;
-    if (about !== undefined) updates.about = about;
-    if (photo !== undefined) updates.photo = photo;
-    if (userType !== undefined) updates.userType = userType;
+router.get("/:userId", getProfile);
 
-    if (profile) {
-      Object.assign(profile, updates);
-      await profile.save();
-    } else {
-      profile = await Profile.create({
-        user: req.user.id,
-        ...updates,
-      });
-    }
-    res.json(profile);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post("/", requireAuth, uploadLimiter, validateImage("photo"), validatePdf("verificationDocument"), upsertProfile);
 
 export default router;

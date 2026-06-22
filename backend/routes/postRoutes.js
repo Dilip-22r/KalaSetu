@@ -1,165 +1,49 @@
 import express from "express";
-import { Post } from "../models/Post.js";
-import { User } from "../models/User.js";
 import { requireAuth, optionalAuth, requireRole } from "../middleware/authMiddleware.js";
-import { Notification } from "../models/Notification.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import { uploadLimiter } from "../middleware/rateLimitMiddleware.js";
+import { validateImage } from "../middleware/imageValidationMiddleware.js";
+import {
+  getPosts,
+  getPostById,
+  getPostLikers,
+  getPostDislikers,
+  createPost,
+  deletePost,
+  likePost,
+  dislikePost,
+  repostPost,
+  addComment,
+  getComments,
+  deleteComment,
+  editPost,
+} from "../controllers/postController.js";
 
 const router = express.Router();
 
+router.get("/", optionalAuth, getPosts);
 
+router.get("/:id", optionalAuth, getPostById);
 
-// GET all posts (public) with optional search
-router.get("/", optionalAuth, async (req, res) => {
-  try {
-    const { search, category } = req.query;
-    const filter = {};
-    if (category) filter.category = category;
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { content: { $regex: search, $options: "i" } },
-        { tags: { $in: [new RegExp(search, "i")] } },
-      ];
-    }
-    const posts = await Post.find(filter)
-      .populate("author", "username fullName role")
-      .sort({ createdAt: -1 });
-    res.json(posts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get("/:id/likes", getPostLikers);
 
-// GET single post
-router.get("/:id", async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id).populate("author", "username fullName role");
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    res.json(post);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.get("/:id/dislikes", getPostDislikers);
 
-// GET post likers
-router.get("/:id/likes", async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id).populate("likes", "username fullName profilePic");
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    res.json(post.likes);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.post("/", requireAuth, requireRole, uploadLimiter, validateImage("image"), createPost);
 
-// CREATE post (artisan/ngo only)
-router.post("/", requireAuth, requireRole, async (req, res) => {
-  try {
-    const { title, content, category, tags, image } = req.body;
-    const post = new Post({
-      author: req.user.id,
-      title,
-      content,
-      category: category || "story",
-      tags: tags || [],
-      image: image || "",
-    });
-    await post.save();
-    const populated = await post.populate("author", "username fullName role");
-    res.status(201).json(populated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.delete("/:id", requireAuth, deletePost);
 
-// DELETE post (author only)
-router.delete("/:id", requireAuth, async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    if (post.author.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not your post" });
-    }
-    await post.deleteOne();
-    res.json({ message: "Post deleted" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.put("/:id/like", requireAuth, likePost);
 
-// LIKE/UNLIKE post
-router.put("/:id/like", requireAuth, async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    const idx = post.likes.indexOf(req.user.id);
-    
-    if (idx === -1) {
-      post.likes.push(req.user.id);
-      await post.save();
+router.put("/:id/dislike", requireAuth, dislikePost);
 
-      // Send Notification
-      if (post.author.toString() !== req.user.id) {
-        const existing = await Notification.findOne({
-          recipient: post.author,
-          sender: req.user.id,
-          type: "like",
-          post: post._id,
-        });
+router.put("/:id/repost", requireAuth, repostPost);
 
-        if (!existing) {
-          const newNotif = new Notification({
-            recipient: post.author,
-            sender: req.user.id,
-            type: "like",
-            post: post._id,
-          });
-          await newNotif.save();
-          const populated = await newNotif.populate("sender", "username fullName profilePic");
-          const receiverSocketId = getReceiverSocketId(post.author.toString());
-          if (receiverSocketId) io.to(receiverSocketId).emit("newNotification", populated);
-        }
-      }
-    } else {
-      post.likes.splice(idx, 1);
-      await post.save();
+router.post("/:id/comments", requireAuth, addComment);
 
-      // Remove Notification on unlike
-      if (post.author.toString() !== req.user.id) {
-        await Notification.deleteOne({
-          recipient: post.author,
-          sender: req.user.id,
-          type: "like",
-          post: post._id,
-        });
-      }
-    }
+router.get("/:id/comments", getComments);
 
-    res.json({ likes: post.likes.length });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.delete("/:id/comments/:commentId", requireAuth, deleteComment);
 
-// EDIT post (author only)
-router.put("/:id", requireAuth, async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: "Post not found" });
-    if (post.author.toString() !== req.user.id) return res.status(403).json({ message: "Not your post" });
-    const { title, content, category, tags, image } = req.body;
-    post.title = title ?? post.title;
-    post.content = content ?? post.content;
-    post.category = category ?? post.category;
-    post.tags = tags ?? post.tags;
-    post.image = image ?? post.image;
-    await post.save();
-    const populated = await post.populate("author", "username fullName role");
-    res.json(populated);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+router.put("/:id", requireAuth, uploadLimiter, validateImage("image"), editPost);
 
 export default router;

@@ -8,6 +8,7 @@ import "../components/home/Home.css";
 import { ProfileHeaderSkeleton, PostSkeleton } from "../components/common/Skeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
+import Footer from "../components/common/Footer";
 import API from "../utils/api";
 
 const getRoleLabel = (role) => {
@@ -89,6 +90,7 @@ function Profile() {
   const [followingList, setFollowingList] = useState([]);
   const [followingLoading, setFollowingLoading] = useState(false);
   const [followingError, setFollowingError] = useState("");
+  const [skillsModalOpen, setSkillsModalOpen] = useState(false);
 
   const isOwn = currentUser && currentUser._id === userId;
   const { socket } = useAuthStore();
@@ -109,7 +111,7 @@ function Profile() {
     axios
       .get(`${API}/reports/block-status/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setIsBlocked(res.data.isBlocked))
-      .catch(() => {});
+      .catch(() => { });
   }, [userId, isOwn]);
 
   const handleUnblock = async () => {
@@ -207,20 +209,10 @@ function Profile() {
   };
 
   const handleEditClick = () => {
-    if (currentUser?.role === "user") {
-      openRegisterPrompt();
-      return;
-    }
-
-    navigate("/edit-profile");
+    navigate("/settings?tab=profile");
   };
 
   const handleMessageClick = () => {
-    if (currentUser?.role === "user") {
-      openRegisterPrompt();
-      return;
-    }
-
     navigate(`/messages/${userId}`);
   };
 
@@ -374,6 +366,7 @@ function Profile() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadProfileData = async () => {
       // Fire all three requests in parallel
       const token = localStorage.getItem("token");
@@ -469,22 +462,55 @@ function Profile() {
                     {currentUser.email}
                   </span>
                 </div>
+
+                <div className="prof-stats-row">
+                  {currentUser.role !== "user" && (
+                    <div className="prof-stat-card">
+                      <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
+                      <strong>0</strong>
+                      <small>Likes</small>
+                    </div>
+                  )}
+
+                  <div
+                    className={`prof-stat-card prof-stat-clickable ${currentUser.role === "user" ? "prof-stat-compact" : ""}`}
+                    onClick={handleFollowingClick}
+                  >
+                    <span className="prof-stat-icon"><i className="fi fi-sr-user-check" /></span>
+                    <strong>{followingCount}</strong>
+                    <small>Following</small>
+                  </div>
+                </div>
+              </div>
+
+              <div className="prof-hero-actions">
+                <button className="prof-secondary-btn prof-edit-btn" onClick={handleEditClick}>
+                  <i className="fi fi-sr-pencil" />
+                  Edit Profile
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="prof-empty-state">
-            <div className="prof-empty-icon">
-              <i className="fi fi-sr-circle-user" />
-            </div>
-            <h3 className="display-serif">Your portfolio is ready to be shaped</h3>
-            <p>Complete your profile to add your location, skills, story, and cultural focus.</p>
-            <button
-              className="prof-primary-btn"
-              onClick={() => navigate(currentUser?.role === "user" ? "/register" : "/edit-profile")}
-            >
-              {currentUser?.role === "user" ? "Register as Artisan / NGO" : "Complete Profile"}
-            </button>
+          {/* Unified Sidebar for Members */}
+          <div className="prof-sidebar-col">
+            <aside className="prof-sidebar">
+              <div className="prof-card prof-register-card">
+                <h3>
+                  <i className="fi fi-sr-star" style={{ color: "var(--brand-500)" }} />
+                  Join the Movement
+                </h3>
+                <p className="prof-register-desc">
+                  Register as an Artisan or NGO to build your portfolio, share cultural stories, and unlock messaging.
+                </p>
+                <button 
+                  className="prof-primary-btn prof-register-sidebar-btn" 
+                  onClick={() => navigate("/register")}
+                >
+                  Register Now
+                </button>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
@@ -567,35 +593,35 @@ function Profile() {
                       {profile.location}
                     </span>
                   )}
-                  {skillTags.length > 0 && (
+                  {profileUser?.role !== "user" && (
                     <span>
-                      <i className="fi fi-sr-palette" style={{ color: '#C4704A' }} />
-                      {skillTags[0]}
+                      <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
+                      Joined {joinDate}
                     </span>
                   )}
-                  <span>
-                    <i className="fi fi-sr-calendar" style={{ color: '#5a7fc4' }} />
-                    Joined {joinDate}
-                  </span>
                 </div>
 
                 <div className="prof-stats-row">
-                  <div className="prof-stat-card">
-                    <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
-                    <strong>{totalLikes}</strong>
-                    <small>Likes</small>
-                  </div>
+                  {profileUser?.role !== "user" && (
+                    <div className="prof-stat-card">
+                      <span className="prof-stat-icon"><i className="fi fi-sr-heart" /></span>
+                      <strong>{totalLikes}</strong>
+                      <small>Likes</small>
+                    </div>
+                  )}
+                  {profileUser?.role !== "user" && (
+                    <div
+                      className="prof-stat-card prof-stat-clickable"
+                      onClick={handleFollowersClick}
+                      title="View followers"
+                    >
+                      <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
+                      <strong>{followersCount}</strong>
+                      <small>Followers</small>
+                    </div>
+                  )}
                   <div
-                    className="prof-stat-card prof-stat-clickable"
-                    onClick={handleFollowersClick}
-                    title="View followers"
-                  >
-                    <span className="prof-stat-icon"><i className="fi fi-sr-user-add" /></span>
-                    <strong>{followersCount}</strong>
-                    <small>Followers</small>
-                  </div>
-                  <div
-                    className="prof-stat-card prof-stat-clickable"
+                    className={`prof-stat-card prof-stat-clickable ${profileUser?.role === "user" ? "prof-stat-compact" : ""}`}
                     onClick={handleFollowingClick}
                     title="View following"
                   >
@@ -613,7 +639,7 @@ function Profile() {
                     Edit Profile
                   </button>
                 )}
-                {currentUser && !isOwn && !isBlocked && (
+                {currentUser && !isOwn && !isBlocked && profileUser?.role !== "user" && (
                   <div className="prof-more-wrap" style={{ position: "relative" }}>
                     <button
                       className={`prof-primary-btn ${following ? "prof-following-btn" : requested ? "prof-requested-btn" : ""}`}
@@ -628,7 +654,7 @@ function Profile() {
                       <>
                         <div className="prof-more-overlay" onClick={() => setShowUnfollowDropdown(false)} />
                         <div className="prof-more-dropdown" style={{ right: 0, left: "auto", minWidth: "120px" }}>
-                          <button 
+                          <button
                             className="prof-unfollow-btn"
                             onClick={() => { setShowUnfollowDropdown(false); handleFollow(); }}
                             style={{ color: "#e11d48", fontWeight: "600" }}
@@ -676,89 +702,128 @@ function Profile() {
           </div>
 
           {/* Sidebar column: cards + content toggle buttons */}
-          <div className="prof-sidebar-col">
-            <aside className="prof-sidebar">
-              <div className="prof-card">
-                <h3>
-                  <i className="fi fi-sr-comment-alt-dots" />
-                  About
-                </h3>
-                <p>{profile.about || "This member has not added a profile story yet."}</p>
-              </div>
-
-              {skillTags.length > 0 && (
-                <div className="prof-card">
-                  <h3>
-                    <i className="fi fi-sr-palette" />
-                    Skills &amp; Focus
-                  </h3>
-                  <div className="prof-side-tags">
-                    {skillTags.map((skill) => (
-                      <span key={skill} className="prof-skill-pill">
-                        {skill}
-                      </span>
-                    ))}
+          {!(profileUser?.role === "user" && !isOwn) && (
+            <div className="prof-sidebar-col">
+              <aside className="prof-sidebar">
+                {profileUser?.role === "user" && (
+                  <div className="prof-card prof-register-card">
+                    <h3>
+                      <i className="fi fi-sr-star" style={{ color: "var(--brand-500)" }} />
+                      Join the Movement
+                    </h3>
+                    <p className="prof-register-desc">
+                      Register as an Artisan or NGO to build your portfolio, share cultural stories, and unlock messaging.
+                    </p>
+                    <button 
+                      className="prof-primary-btn prof-register-sidebar-btn" 
+                      onClick={() => navigate("/register")}
+                    >
+                      Register Now
+                    </button>
                   </div>
+                )}
+
+                {profileUser?.role !== "user" && (
+                  <>
+                    <div className="prof-card">
+                      <h3>
+                        <i className="fi fi-sr-comment-alt-dots" />
+                        About
+                      </h3>
+                      <p>{profile.about || "This member has not added a profile story yet."}</p>
+                    </div>
+
+                    {skillTags.length > 0 && (
+                      <div className="prof-card">
+                        <h3>
+                          <i className="fi fi-sr-palette" />
+                          Skills &amp; Focus
+                        </h3>
+                        <div className="prof-side-tags-row">
+                          {skillTags.slice(0, 2).map((skill) => (
+                            <span key={skill} className="prof-skill-pill">
+                              {skill}
+                            </span>
+                          ))}
+                          {skillTags.length > 2 && (
+                            <button
+                              className="prof-skills-more-btn"
+                              onClick={() => setSkillsModalOpen(true)}
+                            >
+                              +{skillTags.length - 2} more
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="prof-card">
+                      <h3>
+                        <i className="fi fi-sr-info" />
+                        Details
+                      </h3>
+                      <div className="prof-details">
+                        {profile.userType && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Type</span>
+                            <span className={`prof-type ${profileUser?.role}`}>{profile.userType}</span>
+                          </div>
+                        )}
+                        {profile.organizationId && profileUser?.role === "ngo" && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Org ID</span>
+                            <span>{profile.organizationId}</span>
+                          </div>
+                        )}
+                        {profile.age && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Age</span>
+                            <span>{profile.age}</span>
+                          </div>
+                        )}
+                        {profile.gender && (
+                          <div className="prof-detail-row">
+                            <span className="prof-detail-label">Gender</span>
+                            <span>{profile.gender}</span>
+                          </div>
+                        )}
+                        <div className="prof-detail-row">
+                          <span className="prof-detail-label">Email</span>
+                          <span>{profileUser?.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </aside>
+
+              {/* Posts / Reposts toggle buttons */}
+              {profileUser?.role !== "user" && (
+                <div className="prof-content-btns">
+                  <button
+                    className={`prof-content-btn ${activeTab === "posts" ? "active" : ""}`}
+                    onClick={() => setActiveTab(activeTab === "posts" ? null : "posts")}
+                  >
+                    <i className="fi fi-sr-apps" />
+                    Posts
+                    <span className="prof-content-btn-count">
+                      {posts.filter(p => p.author?._id === userId).length}
+                    </span>
+                  </button>
+                  <button
+                    className={`prof-content-btn ${activeTab === "reposts" ? "active" : ""}`}
+                    onClick={() => setActiveTab(activeTab === "reposts" ? null : "reposts")}
+                  >
+                    <i className="fi fi-sr-arrows-retweet" />
+                    Reposts
+                    <span className="prof-content-btn-count">
+                      {posts.filter(p => p.reposts?.includes(userId)).length}
+                    </span>
+                  </button>
                 </div>
               )}
-
-              <div className="prof-card">
-                <h3>
-                  <i className="fi fi-sr-user" />
-                  Details
-                </h3>
-                <div className="prof-details">
-                  {profile.age && (
-                    <div className="prof-detail-row">
-                      <span className="prof-detail-label">Age</span>
-                      <span>{profile.age}</span>
-                    </div>
-                  )}
-                  {profile.gender && (
-                    <div className="prof-detail-row">
-                      <span className="prof-detail-label">Gender</span>
-                      <span>{profile.gender}</span>
-                    </div>
-                  )}
-                  {profile.userType && (
-                    <div className="prof-detail-row">
-                      <span className="prof-detail-label">Type</span>
-                      <span className={`prof-type ${profileUser?.role}`}>{profile.userType}</span>
-                    </div>
-                  )}
-                  <div className="prof-detail-row">
-                    <span className="prof-detail-label">Email</span>
-                    <span>{profileUser?.email}</span>
-                  </div>
-                </div>
-              </div>
-
-            </aside>
-
-            {/* Posts / Reposts toggle buttons */}
-            <div className="prof-content-btns">
-              <button
-                className={`prof-content-btn ${activeTab === "posts" ? "active" : ""}`}
-                onClick={() => setActiveTab(activeTab === "posts" ? null : "posts")}
-              >
-                <i className="fi fi-sr-apps" />
-                Posts
-                <span className="prof-content-btn-count">
-                  {posts.filter(p => p.author?._id === userId).length}
-                </span>
-              </button>
-              <button
-                className={`prof-content-btn ${activeTab === "reposts" ? "active" : ""}`}
-                onClick={() => setActiveTab(activeTab === "reposts" ? null : "reposts")}
-              >
-                <i className="fi fi-sr-arrows-retweet" />
-                Reposts
-                <span className="prof-content-btn-count">
-                  {posts.filter(p => p.reposts?.includes(userId)).length}
-                </span>
-              </button>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Posts section — only visible when a tab is active */}
@@ -826,6 +891,8 @@ function Profile() {
           </div>
         )}
       </div>
+
+      <Footer />
 
       {moreModal && (
         <div className="prof-logout-overlay" onClick={() => { setMoreModal(null); setReportReason(""); setReportDetails(""); }}>
@@ -1045,6 +1112,25 @@ function Profile() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {skillsModalOpen && (
+        <div className="prof-logout-overlay" style={{ zIndex: 10000 }}>
+          <div className="prof-more-modal prof-likes-modal">
+            <div className="prof-likes-header">
+              <h3>Skills & Focus</h3>
+              <button onClick={() => setSkillsModalOpen(false)}>Close</button>
+            </div>
+            <div className="prof-likes-body" style={{ padding: '24px' }}>
+              <div className="prof-skill-tags" style={{ marginTop: 0 }}>
+                {skillTags.map((skill) => (
+                  <span key={skill} className="prof-skill-pill" style={{ fontSize: '13px', padding: '10px 16px' }}>
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

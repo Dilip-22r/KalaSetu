@@ -191,18 +191,21 @@
   padding: 14px 32px;
   border: none;
   border-radius: 30px;
-  background: #cd6043;
+  background: linear-gradient(135deg, var(--accent-600), var(--accent-500));
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: center;
+  box-shadow: 0 8px 20px rgba(209, 123, 73, 0.25);
 }
 
 .reg-submit:hover,
 .reg-cancel:hover {
-  background: #b25035;
+  background: linear-gradient(135deg, #c26f51, #b05e42);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(209, 123, 73, 0.35);
 }
 
 .reg-submit:disabled,

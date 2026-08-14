@@ -1,0 +1,44 @@
+import { Notification } from "../models/Notification.js";
+import { Profile } from "../models/Profile.js";
+
+// ── GET /notifications ────────────────────────────────────────────────
+export const getNotifications = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || 20);
+
+    // Clean up expired notifications (Lazy Deletion)
+    const profile = await Profile.findOne({ user: req.user.id });
+    if (profile && profile.notificationRetentionDays > 0) {
+      const cutoffDate = new Date(Date.now() - profile.notificationRetentionDays * 24 * 60 * 60 * 1000);
+      await Notification.deleteMany({ recipient: req.user.id, createdAt: { $lt: cutoffDate } });
+    }
+
+    const notifications = await Notification.find({ recipient: req.user.id })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("sender", "username fullName profilePic")
+      .populate("post", "title image");
+
+    const total = await Notification.countDocuments({ recipient: req.user.id });
+    const unreadCount = await Notification.countDocuments({ recipient: req.user.id, read: false });
+
+    res.json({ notifications, total, unreadCount, hasMore: page * limit < total });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── PUT /notifications/mark-read ──────────────────────────────────────
+export const markAllRead = async (req, res, next) => {
+  try {
+    await Notification.updateMany(
+      { recipient: req.user.id, read: false },
+      { read: true }
+    );
+    res.json({ message: "Notifications marked as read" });
+  } catch (err) {
+    next(err);
+  }
+};

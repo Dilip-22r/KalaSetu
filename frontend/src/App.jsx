@@ -9,10 +9,10 @@ import Register from "./components/register/Register";
 import Search from "./pages/Search";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
-import EditProfile from "./pages/EditProfile";
 import CreatePost from "./pages/CreatePost";
 import EditPost from "./pages/EditPost";
 import Settings from "./pages/Settings";
+
 import "./App.css";
 import "./index.css";
 
@@ -30,10 +30,10 @@ function App() {
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:userId" element={<Messages />} />
           <Route path="/profile/:userId" element={<Profile />} />
-          <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/create-post" element={<CreatePost />} />
           <Route path="/edit-post/:postId" element={<EditPost />} />
           <Route path="/settings" element={<Settings />} />
+
         </Routes>
       </BrowserRouter>
       <Analytics />

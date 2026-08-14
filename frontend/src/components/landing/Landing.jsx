@@ -9,6 +9,7 @@ import cultureImg from "../../assets/culture.jpeg";
 import IntroAnimation from "./Introanimation";
 import TiltedCard from "../common/TiltedCard/TiltedCard";
 import ClickSpark from "../common/ClickSpark/ClickSpark";
+import Footer from "../common/Footer";
 
 const artSymbols = ["🎨", "🪘", "🎭", "🌸", "🏺", "🪁", "🧵", "🪗", "🎋", "🌺", "🎐", "🧿", "🪔", "🥁", "🎻", "💫"];
 
@@ -31,52 +32,7 @@ function CountUp({ target, suffix = "" }) {
   return <span>{count.toLocaleString()}{suffix}</span>;
 }
 
-const MODAL_CONTENT = {
-  terms: {
-    title: "Terms of Service",
-    body: [
-      { heading: "1. Acceptance", text: "By creating an account on KalaSetu, you agree to these Terms of Service." },
-      { heading: "2. Eligibility", text: "You must be at least 13 years old to use KalaSetu. By registering, you confirm that the information you provide is accurate and complete." },
-      { heading: "3. User Conduct", text: "You agree not to post content that is harmful, offensive, or violates any applicable law. KalaSetu reserves the right to remove content or suspend accounts that violate these terms." },
-      { heading: "4. Intellectual Property", text: "All content you post remains yours. By posting on KalaSetu, you grant us a non-exclusive license to display it on the platform. You must not post content that infringes on others' intellectual property." },
-      { heading: "5. Termination", text: "We reserve the right to suspend or terminate your account at any time for violations of these terms. You may also delete your account at any time." },
-      { heading: "6. Changes", text: "We may update these terms from time to time. Continued use of KalaSetu after changes constitutes acceptance of the new terms." },
-    ]
-  },
-  privacy: {
-    title: "Privacy Policy",
-    body: [
-      { heading: "1. Information We Collect", text: "We collect your name, email, username, and profile details you provide during registration and profile setup." },
-      { heading: "2. How We Use It", text: "Your information is used to operate the platform, personalise your experience, and enable communication between users. We do not sell your data to third parties." },
-      { heading: "3. Data Storage", text: "Your data is stored securely in our database. Passwords are hashed using bcrypt and are never stored in plain text." },
-      { heading: "4. Cookies", text: "KalaSetu uses JWT tokens stored in your browser for authentication. We do not use third-party tracking cookies." },
-      { heading: "5. Your Rights", text: "You can update or delete your profile information at any time. To request full account deletion, contact us directly." },
-      { heading: "6. Contact", text: "For any privacy-related concerns, reach out to us at support@kalasetu.in." },
-    ]
-  }
-};
 
-function PolicyModal({ type, onClose }) {
-  const { title, body } = MODAL_CONTENT[type];
-  return (
-    <div className="l-modal-overlay" onClick={onClose}>
-      <div className="l-modal" onClick={e => e.stopPropagation()}>
-        <div className="l-modal-header">
-          <h3>{title}</h3>
-          <button className="l-modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="l-modal-body">
-          {body.map((section, i) => (
-            <div key={i} className="l-modal-section">
-              <h4>{section.heading}</h4>
-              <p>{section.text}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const featuresData = [
   { icon: "🎨", title: "Showcase Your Art", text: "Create a rich profile with your skills, location, and cultural story. Let the world discover your craft." },
@@ -94,7 +50,6 @@ function Landing() {
   const navigate = useNavigate();
   const [introDone, setIntroDone] = useState(hasPlayedIntro);
   const [showTop, setShowTop] = useState(false);
-  const [modal, setModal] = useState(null);
   const featuresRef = useRef(null);
 
   useEffect(() => {
@@ -161,6 +116,7 @@ function Landing() {
             <button className="l-nav-ghost" onClick={() => { const el = document.getElementById("features"); if (el) { const top = el.getBoundingClientRect().top + window.scrollY - 80; window.scrollTo({ top, behavior: "smooth" }); } }}>
               Features
             </button>
+
             <button className="l-btn-outline" onClick={() => navigate("/signin")}>
               Sign In
             </button>
@@ -304,8 +260,6 @@ function Landing() {
           </div>
         </section>
 
-        {modal && <PolicyModal type={modal} onClose={() => setModal(null)} />}
-
         {/* Scroll to Top */}
         {showTop && (
           <button className="l-scroll-top" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Scroll to top">
@@ -330,22 +284,7 @@ function Landing() {
         </section>
 
         {/* GitHub-Style Footer */}
-        <footer className="l-footer">
-          <div className="l-footer-inner">
-            <div className="l-footer-left">
-              <img src={kalasetuLogo} alt="KalaSetu" className="l-footer-logo" />
-              <span className="l-copyright">&copy; 2026 KalaSetu, Inc.</span>
-            </div>
-            <div className="l-footer-links">
-              <span className="l-footer-link" onClick={() => setModal("terms")}>Terms</span>
-              <span className="l-footer-link" onClick={() => setModal("privacy")}>Privacy</span>
-              <span className="l-footer-link" onClick={() => alert("Security details coming soon!")}>Security</span>
-              <span className="l-footer-link" onClick={() => alert("Status page coming soon!")}>Status</span>
-              <span className="l-footer-link" onClick={() => alert("Documentation coming soon!")}>Docs</span>
-              <span className="l-footer-link" onClick={() => alert("Support contact coming soon!")}>Contact</span>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </ClickSpark>
   );

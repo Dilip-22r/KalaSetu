@@ -7,14 +7,19 @@ function onLimitReached(req, _res, _options) {
   console.warn(`[RATE LIMIT] ${timestamp} | IP: ${ip} | ${req.method} ${req.originalUrl}`);
 }
 
+// ─── Shared Localhost Bypass ─────────────────────────────────────────────────
+// Skips rate limiting for local development (127.0.0.1 / ::1)
+const isLocalhost = (req) => req.ip === "127.0.0.1" || req.ip === "::1";
+
 // ─── Auth Limiter ─────────────────────────────────────────────────────────────
 // Applied to /auth/login and /auth/signup
 // Key: IP + email (lowercased) — prevents IP-rotation attacks targeting one account
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: 20, // Increased from 10 to 20 for better UX
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isLocalhost,
   keyGenerator: (req) => {
     const ip = ipKeyGenerator(req.ip);
     const email = (req.body?.email || "").toLowerCase().trim();
@@ -30,9 +35,10 @@ export const authLimiter = rateLimit({
 // Applied globally to all routes — prevents bots and scrapers
 export const generalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  max: 600, // Increased from 200 to 600 (~40 req/min) for smoother browsing
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isLocalhost,
   validate: { ip: false },
   handler: (req, res, _next, _options) => {
     onLimitReached(req, res, _options);
@@ -44,9 +50,10 @@ export const generalApiLimiter = rateLimit({
 // Applied only to image/file upload endpoints — prevents base64 spam / memory abuse
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  max: 10, // Kept at 10 as requested
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isLocalhost,
   validate: { ip: false },
   handler: (req, res, _next, _options) => {
     onLimitReached(req, res, _options);
@@ -61,6 +68,7 @@ export const deleteAccountLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isLocalhost,
   validate: { ip: false },
   handler: (req, res, _next, _options) => {
     onLimitReached(req, res, _options);

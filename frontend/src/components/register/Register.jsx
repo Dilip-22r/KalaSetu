@@ -394,7 +394,10 @@ function Register() {
                   <textarea
                     placeholder=""
                     rows={4}
-                    {...register("about", { required: "Please write an about section" })}
+                    {...register("about", { 
+                      required: "Please write an about section",
+                      maxLength: { value: 300, message: "Maximum 300 characters allowed" }
+                    })}
                   />
                   {errors.about && <small>{errors.about.message}</small>}
                 </div>

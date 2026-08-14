@@ -93,7 +93,4 @@ a {
   font-family: "Fraunces", Georgia, serif;
 }
 
-/* Utility to lock background scroll when modals/overlays are open */
-body.modal-open {
-  overflow: hidden;
-}
+

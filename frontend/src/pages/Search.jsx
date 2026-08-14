@@ -7,6 +7,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { PostCard } from "../components/home/Home";
 import "../components/home/Home.css";
 import { PostSkeleton, ProfileCardSkeleton } from "../components/common/Skeleton";
+import Footer from "../components/common/Footer";
 import API from "../utils/api";
 
 const CreatorSkills = ({ skills }) => {
@@ -311,6 +312,9 @@ function Search() {
           </div>
         )}
       </div>
+
+      <Footer />
+
       {/* ─── Likes Modal ──────────────────────────────────── */}
       {likesModalPostId && (
         <div className="likes-modal-overlay" onClick={() => setLikesModalPostId(null)}>
